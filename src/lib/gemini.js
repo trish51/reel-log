@@ -7,8 +7,8 @@ import { buildRecommendationPrompt, parseRecommendationResponse } from "./recomm
 // preflight for direct-from-browser calls like this one.
 const GEMINI_MODEL = "gemini-3.6-flash";
 
-export async function getGeminiRecommendations(shows, apiKey) {
-  const prompt = buildRecommendationPrompt(shows);
+export async function getGeminiRecommendations(promptContext, apiKey) {
+  const prompt = buildRecommendationPrompt(promptContext);
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
