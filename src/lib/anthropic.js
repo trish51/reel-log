@@ -2,8 +2,8 @@ import { buildRecommendationPrompt, parseRecommendationResponse } from "./recomm
 
 const ANTHROPIC_MODEL = "claude-opus-5";
 
-export async function getAnthropicRecommendations(shows, apiKey) {
-  const prompt = buildRecommendationPrompt(shows);
+export async function getAnthropicRecommendations(promptContext, apiKey) {
+  const prompt = buildRecommendationPrompt(promptContext);
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",

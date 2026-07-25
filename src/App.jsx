@@ -4,46 +4,20 @@ import {
   Plus,
   X,
   Search,
-  Sparkles,
   RotateCcw,
   Trash2,
-  Heart,
-  ThumbsUp,
-  Meh,
-  ThumbsDown,
   Loader2,
   ChevronDown,
   Tag,
-  Tv,
-  Clapperboard,
-  MoreHorizontal,
   Settings,
   RefreshCw,
 } from "lucide-react";
 import { fetchTmdbInfo } from "./lib/tmdb";
-import { getWatchNextRecommendations } from "./lib/ai";
-import { PROVIDERS, getActiveProvider, hasActiveProviderKey } from "./lib/providers";
 import SettingsPanel from "./components/SettingsPanel";
+import RecommendationsPanel from "./components/RecommendationsPanel";
+import { Poster } from "./components/Poster";
+import { STATUS, CONTENT_TYPE, RATINGS } from "./constants";
 import { ACCENT, BG, PANEL, PANEL_ALT, BORDER, TEXT, TEXT_MUTED, TEXT_DIM, TEXT_BODY, DANGER } from "./theme";
-
-const STATUS = {
-  want: { label: "Want to Watch", short: "Want", color: ACCENT },
-  watching: { label: "Watching", short: "Watching", color: "#4FA8A0" },
-  watched: { label: "Watched", short: "Watched", color: "#8A93A3" },
-};
-
-const CONTENT_TYPE = {
-  tv: { label: "TV Show", short: "TV", Icon: Tv },
-  movie: { label: "Movie", short: "Movie", Icon: Clapperboard },
-  other: { label: "Other", short: "Other", Icon: MoreHorizontal },
-};
-
-const RATINGS = {
-  loved: { label: "Loved", color: "#E8546E", Icon: Heart },
-  liked: { label: "Liked", color: "#5FB88F", Icon: ThumbsUp },
-  meh: { label: "Meh", color: "#C9A44E", Icon: Meh },
-  disliked: { label: "Disliked", color: "#6B7280", Icon: ThumbsDown },
-};
 
 const STORAGE_KEY = "reel-log:shows";
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -72,60 +46,6 @@ function useShows() {
   }, []);
 
   return { shows, persist, error };
-}
-
-function Stamp({ ratingKey, size = "md" }) {
-  if (!ratingKey || !RATINGS[ratingKey]) return null;
-  const r = RATINGS[ratingKey];
-  const Icon = r.Icon;
-  const dims = size === "sm" ? "w-3.5 h-3.5" : "w-5 h-5";
-  return (
-    <div
-      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm font-semibold uppercase tracking-wider"
-      style={{
-        color: r.color,
-        border: `1.5px solid ${r.color}`,
-        transform: "rotate(-3deg)",
-        fontSize: size === "sm" ? "9px" : "11px",
-        fontFamily: "'IBM Plex Mono', monospace",
-      }}
-    >
-      <Icon className={dims} strokeWidth={2.2} />
-      {r.label}
-    </div>
-  );
-}
-
-function Poster({ posterUrl, contentType, rating, showRating, loading }) {
-  const Icon = CONTENT_TYPE[contentType || "tv"].Icon;
-  return (
-    <div
-      className="relative w-32 sm:w-36 shrink-0 aspect-[2/3] overflow-hidden"
-      style={{ background: BG, borderRight: `1px solid ${BORDER}` }}
-    >
-      {posterUrl ? (
-        <img src={posterUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center">
-          <Icon className="w-8 h-8" style={{ color: BORDER }} />
-        </div>
-      )}
-      {loading && (
-        <div
-          className="absolute inset-0 animate-shimmer"
-          style={{
-            backgroundImage: `linear-gradient(90deg, transparent, ${ACCENT}33, transparent)`,
-            backgroundSize: "200% 100%",
-          }}
-        />
-      )}
-      {showRating && rating && (
-        <div className="absolute top-2 left-2 rounded-sm px-0.5" style={{ background: "#0A0C0FCC" }}>
-          <Stamp ratingKey={rating} size="sm" />
-        </div>
-      )}
-    </div>
-  );
 }
 
 function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching }) {
@@ -474,85 +394,6 @@ function ShowForm({ initial, onSave, onClose }) {
   );
 }
 
-function Recommendations({ shows }) {
-  const [loading, setLoading] = useState(false);
-  const [recs, setRecs] = useState(null);
-  const [error, setError] = useState(null);
-  const hasKey = hasActiveProviderKey();
-  const providerLabel = PROVIDERS[getActiveProvider()].label;
-
-  const getRecs = async () => {
-    setLoading(true);
-    setError(null);
-    setRecs(null);
-    try {
-      const recommendations = await getWatchNextRecommendations(shows);
-      setRecs(recommendations);
-    } catch (e) {
-      setError(e.message || "Couldn't generate recommendations right now — try again in a moment.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const ratedCount = shows.filter((s) => s.rating).length;
-
-  return (
-    <div className="rounded-xl p-5" style={{ background: PANEL, border: `1px solid ${BORDER}` }}>
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4" style={{ color: ACCENT }} />
-          <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "20px", color: TEXT, letterSpacing: "0.5px" }}>
-            What to watch next
-          </h2>
-        </div>
-        <button
-          onClick={getRecs}
-          disabled={loading || ratedCount === 0 || !hasKey}
-          className="px-4 py-1.5 rounded-md text-sm font-semibold disabled:opacity-40 flex items-center gap-2 hover:opacity-90 active:scale-[0.97] transition-all duration-150"
-          style={{ background: ACCENT, color: BG }}
-        >
-          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-          {loading ? "Thinking..." : "Get suggestions"}
-        </button>
-      </div>
-
-      {!hasKey && (
-        <p className="text-sm mt-3" style={{ color: TEXT_MUTED }}>
-          Add your {providerLabel} API key in Settings (top right) to enable recommendations.
-        </p>
-      )}
-      {hasKey && ratedCount === 0 && (
-        <p className="text-sm mt-3" style={{ color: TEXT_MUTED }}>
-          Rate a few shows as watched first — the more notes you leave, the sharper these get.
-        </p>
-      )}
-      {error && <p className="text-sm mt-3" style={{ color: DANGER }}>{error}</p>}
-
-      {recs && (
-        <div className="grid sm:grid-cols-2 gap-3 mt-4">
-          {recs.map((r, i) => (
-            <div key={i} className="p-3 rounded-lg" style={{ background: PANEL_ALT, border: `1px solid ${BORDER}` }}>
-              <h4 className="font-bold" style={{ color: TEXT, fontFamily: "'Bebas Neue', sans-serif", fontSize: "16px" }}>
-                {r.title}
-              </h4>
-              {r.genres?.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {r.genres.map((g) => (
-                    <span key={g} className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: BG, color: TEXT_MUTED }}>
-                      {g}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <p className="text-sm mt-1.5" style={{ color: TEXT_BODY }}>{r.reason}</p>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function ReelLog() {
   const { shows, persist, error } = useShows();
@@ -608,6 +449,23 @@ export default function ReelLog() {
       // when this lookup fails to find a match.
       fetchDetailsForShow(show.id, show.contentType, show.title);
     }
+  };
+
+  const addRecommendationToLog = (rec) => {
+    saveShow({
+      id: uid(),
+      title: rec.title,
+      contentType: "tv",
+      status: "want",
+      genres: rec.genres || [],
+      posterUrl: rec.posterUrl || null,
+      synopsis: rec.synopsis || "",
+      rating: null,
+      notes: "",
+      rewatchCount: 0,
+      dateAdded: new Date().toISOString(),
+      dateUpdated: new Date().toISOString(),
+    });
   };
 
   const deleteShow = (id) => {
@@ -834,7 +692,7 @@ export default function ReelLog() {
               </div>
             </div>
 
-            <Recommendations shows={shows} />
+            <RecommendationsPanel shows={shows} onAddToLog={addRecommendationToLog} />
           </div>
         )}
       </div>
