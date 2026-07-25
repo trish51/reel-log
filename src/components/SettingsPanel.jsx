@@ -3,10 +3,18 @@ import { X, KeyRound, Trash2 } from "lucide-react";
 import { PROVIDERS, getActiveProvider, setActiveProvider, getProviderKey, setProviderKey } from "../lib/providers";
 import { ACCENT, PANEL, PANEL_ALT, BORDER, TEXT, TEXT_MUTED, TEXT_DIM } from "../theme";
 
+const MODAL_CLOSE_MS = 180;
+
 export default function SettingsPanel({ onClose }) {
   const [provider, setProvider] = useState(getActiveProvider());
   const [key, setKey] = useState(getProviderKey(getActiveProvider()));
   const [saved, setSaved] = useState(false);
+  const [closing, setClosing] = useState(false);
+
+  const requestClose = () => {
+    setClosing(true);
+    setTimeout(onClose, MODAL_CLOSE_MS);
+  };
 
   const switchProvider = (nextProvider) => {
     setProvider(nextProvider);
@@ -30,11 +38,11 @@ export default function SettingsPanel({ onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadeIn"
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${closing ? "animate-fadeOut" : "animate-fadeIn"}`}
       style={{ background: "#0A0C0FBB" }}
     >
       <div
-        className="w-full max-w-md rounded-xl p-6 space-y-4 animate-modalIn"
+        className={`w-full max-w-md rounded-xl p-6 space-y-4 ${closing ? "animate-modalOut" : "animate-modalIn"}`}
         style={{ background: PANEL, border: `1px solid ${BORDER}` }}
       >
         <div className="flex items-center justify-between">
@@ -44,7 +52,11 @@ export default function SettingsPanel({ onClose }) {
               Settings
             </h2>
           </div>
-          <button type="button" onClick={onClose}>
+          <button
+            type="button"
+            onClick={requestClose}
+            className="hover:opacity-70 active:scale-90 transition-all duration-150"
+          >
             <X className="w-5 h-5" style={{ color: TEXT_MUTED }} />
           </button>
         </div>
@@ -59,7 +71,7 @@ export default function SettingsPanel({ onClose }) {
                 key={p.id}
                 type="button"
                 onClick={() => switchProvider(p.id)}
-                className="flex-1 text-left px-3 py-2 rounded-md transition-colors"
+                className="flex-1 text-left px-3 py-2 rounded-md hover:bg-white/5 active:scale-[0.97] transition-all duration-150"
                 style={{
                   border: `1px solid ${provider === p.id ? ACCENT : BORDER}`,
                   background: provider === p.id ? `${ACCENT}22` : "transparent",
@@ -104,7 +116,7 @@ export default function SettingsPanel({ onClose }) {
           <button
             type="button"
             onClick={save}
-            className="flex-1 py-2.5 rounded-md font-semibold transition-colors"
+            className="flex-1 py-2.5 rounded-md font-semibold hover:opacity-90 active:scale-[0.97] transition-all duration-150"
             style={{ background: ACCENT, color: "#14171C" }}
           >
             {saved ? "Saved" : "Save"}
@@ -112,7 +124,7 @@ export default function SettingsPanel({ onClose }) {
           <button
             type="button"
             onClick={clear}
-            className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-md font-semibold text-sm"
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-md font-semibold text-sm hover:bg-white/5 active:scale-[0.97] transition-all duration-150"
             style={{ border: `1px solid ${BORDER}`, color: TEXT_MUTED }}
           >
             <Trash2 className="w-3.5 h-3.5" /> Clear

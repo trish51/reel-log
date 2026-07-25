@@ -96,7 +96,7 @@ function Stamp({ ratingKey, size = "md" }) {
   );
 }
 
-function Poster({ posterUrl, contentType, rating, showRating }) {
+function Poster({ posterUrl, contentType, rating, showRating, loading }) {
   const Icon = CONTENT_TYPE[contentType || "tv"].Icon;
   return (
     <div
@@ -110,6 +110,15 @@ function Poster({ posterUrl, contentType, rating, showRating }) {
           <Icon className="w-8 h-8" style={{ color: BORDER }} />
         </div>
       )}
+      {loading && (
+        <div
+          className="absolute inset-0 animate-shimmer"
+          style={{
+            backgroundImage: `linear-gradient(90deg, transparent, ${ACCENT}33, transparent)`,
+            backgroundSize: "200% 100%",
+          }}
+        />
+      )}
       {showRating && rating && (
         <div className="absolute top-2 left-2 rounded-sm px-0.5" style={{ background: "#0A0C0FCC" }}>
           <Stamp ratingKey={rating} size="sm" />
@@ -119,19 +128,16 @@ function Poster({ posterUrl, contentType, rating, showRating }) {
   );
 }
 
-function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails }) {
+function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching }) {
   const status = STATUS[show.status];
-  const [fetching, setFetching] = useState(false);
 
-  const runFetch = async () => {
-    setFetching(true);
-    await onFetchDetails(show.id, show.contentType);
-    setFetching(false);
+  const runFetch = () => {
+    onFetchDetails(show.id, show.contentType);
   };
 
   return (
     <div
-      className="relative rounded-xl overflow-hidden flex transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_14px_36px_-10px_rgba(157,124,242,0.4)]"
+      className="relative rounded-xl overflow-hidden flex transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_rgba(157,124,242,0.3)]"
       style={{ background: PANEL, border: `1px solid ${status.color}33` }}
     >
       <Poster
@@ -139,6 +145,7 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails }) {
         contentType={show.contentType}
         rating={show.rating}
         showRating={show.status === "watched"}
+        loading={fetching}
       />
 
       <div className="flex-1 p-5 min-w-0">
@@ -184,7 +191,7 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails }) {
           <button
             onClick={runFetch}
             disabled={fetching}
-            className="mt-2 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded disabled:opacity-50 transition-colors"
+            className="mt-2 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded disabled:opacity-50 hover:brightness-125 active:scale-95 transition-all duration-150"
             style={{ background: PANEL_ALT, color: ACCENT, fontFamily: "'IBM Plex Mono', monospace" }}
           >
             {fetching ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
@@ -218,16 +225,16 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails }) {
             {show.status === "watched" && (
               <button
                 onClick={() => onRewatch(show.id)}
-                className="p-1.5 rounded hover:bg-white/5 transition-colors"
+                className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150"
                 title="Log a rewatch"
               >
                 <RotateCcw className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
               </button>
             )}
-            <button onClick={() => onEdit(show)} className="p-1.5 rounded hover:bg-white/5 transition-colors" title="Edit">
+            <button onClick={() => onEdit(show)} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="Edit">
               <Tag className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
             </button>
-            <button onClick={() => onDelete(show.id)} className="p-1.5 rounded hover:bg-white/5 transition-colors" title="Remove">
+            <button onClick={() => onDelete(show.id)} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="Remove">
               <Trash2 className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
             </button>
           </div>
@@ -236,6 +243,8 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails }) {
     </div>
   );
 }
+
+const MODAL_CLOSE_MS = 180;
 
 function ShowForm({ initial, onSave, onClose }) {
   const [title, setTitle] = useState(initial?.title || "");
@@ -246,6 +255,12 @@ function ShowForm({ initial, onSave, onClose }) {
   const [rating, setRating] = useState(initial?.rating || null);
   const [notes, setNotes] = useState(initial?.notes || "");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [closing, setClosing] = useState(false);
+
+  const requestClose = () => {
+    setClosing(true);
+    setTimeout(onClose, MODAL_CLOSE_MS);
+  };
 
   const pickRating = (key) => {
     setRating(key);
@@ -277,22 +292,27 @@ function ShowForm({ initial, onSave, onClose }) {
       dateAdded: initial?.dateAdded || new Date().toISOString(),
       dateUpdated: new Date().toISOString(),
     });
+    requestClose();
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadeIn"
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${closing ? "animate-fadeOut" : "animate-fadeIn"}`}
       style={{ background: "#0A0C0FBB" }}
     >
       <div
-        className="w-full max-w-md rounded-xl flex flex-col animate-modalIn"
+        className={`w-full max-w-md rounded-xl flex flex-col ${closing ? "animate-modalOut" : "animate-modalIn"}`}
         style={{ background: PANEL, border: `1px solid ${BORDER}`, maxHeight: "90vh" }}
       >
         <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
           <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "24px", color: TEXT, letterSpacing: "0.5px" }}>
             {initial ? "Edit entry" : "Add a show"}
           </h2>
-          <button type="button" onClick={onClose}>
+          <button
+            type="button"
+            onClick={requestClose}
+            className="hover:opacity-70 active:scale-90 transition-all duration-150"
+          >
             <X className="w-5 h-5" style={{ color: TEXT_MUTED }} />
           </button>
         </div>
@@ -317,7 +337,7 @@ function ShowForm({ initial, onSave, onClose }) {
                     type="button"
                     key={key}
                     onClick={() => setContentType(key)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 active:scale-[0.97] ${contentType === key ? "hover:opacity-90" : "hover:bg-white/5"}`}
                     style={{
                       border: `1px solid ${contentType === key ? TEXT : BORDER}`,
                       color: contentType === key ? BG : TEXT_MUTED,
@@ -354,7 +374,7 @@ function ShowForm({ initial, onSave, onClose }) {
                   type="button"
                   key={key}
                   onClick={() => pickStatus(key)}
-                  className="flex-1 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                  className={`flex-1 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 active:scale-[0.97] ${status === key ? "hover:opacity-90" : "hover:bg-white/5"}`}
                   style={{
                     border: `1px solid ${s.color}`,
                     color: status === key ? BG : s.color,
@@ -377,7 +397,7 @@ function ShowForm({ initial, onSave, onClose }) {
                     type="button"
                     key={key}
                     onClick={() => pickRating(key)}
-                    className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-md transition-colors"
+                    className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-md transition-all duration-150 active:scale-[0.97] ${rating === key ? "hover:opacity-80" : "hover:bg-white/5"}`}
                     style={{
                       border: `1px solid ${r.color}`,
                       background: rating === key ? `${r.color}22` : "transparent",
@@ -397,7 +417,7 @@ function ShowForm({ initial, onSave, onClose }) {
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
-            className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide"
+            className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide hover:opacity-80 active:scale-[0.97] transition-all duration-150"
             style={{ color: TEXT_MUTED }}
           >
             <ChevronDown className="w-3.5 h-3.5 transition-transform" style={{ transform: showAdvanced ? "rotate(180deg)" : "none" }} />
@@ -443,7 +463,7 @@ function ShowForm({ initial, onSave, onClose }) {
           <button
             type="button"
             onClick={submit}
-            className="w-full py-2.5 rounded-md font-semibold transition-colors"
+            className="w-full py-2.5 rounded-md font-semibold hover:opacity-90 active:scale-[0.97] transition-all duration-150"
             style={{ background: ACCENT, color: BG }}
           >
             {initial ? "Save changes" : "Add to log"}
@@ -489,7 +509,7 @@ function Recommendations({ shows }) {
         <button
           onClick={getRecs}
           disabled={loading || ratedCount === 0 || !hasKey}
-          className="px-4 py-1.5 rounded-md text-sm font-semibold disabled:opacity-40 flex items-center gap-2 transition-colors"
+          className="px-4 py-1.5 rounded-md text-sm font-semibold disabled:opacity-40 flex items-center gap-2 hover:opacity-90 active:scale-[0.97] transition-all duration-150"
           style={{ background: ACCENT, color: BG }}
         >
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
@@ -545,25 +565,35 @@ export default function ReelLog() {
   const [filterType, setFilterType] = useState("all");
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("log");
+  const [pendingIds, setPendingIds] = useState(() => new Set());
 
   const fetchDetailsForShow = useCallback(async (id, contentType, titleOverride) => {
-    const existing = (showsRef.current || []).find((s) => s.id === id);
-    const title = titleOverride || existing?.title;
-    if (!title) return;
-    const info = await fetchTmdbInfo(title, contentType || existing?.contentType || "tv");
-    const latest = showsRef.current || [];
-    const next = latest.map((s) =>
-      s.id === id
-        ? {
-            ...s,
-            genres: s.genres.length > 0 ? s.genres : info?.genres || s.genres,
-            posterUrl: s.posterUrl || info?.posterUrl || null,
-            synopsis: s.synopsis || info?.synopsis || "",
-          }
-        : s
-    );
-    showsRef.current = next;
-    persist(next);
+    setPendingIds((prev) => new Set(prev).add(id));
+    try {
+      const existing = (showsRef.current || []).find((s) => s.id === id);
+      const title = titleOverride || existing?.title;
+      if (!title) return;
+      const info = await fetchTmdbInfo(title, contentType || existing?.contentType || "tv");
+      const latest = showsRef.current || [];
+      const next = latest.map((s) =>
+        s.id === id
+          ? {
+              ...s,
+              genres: s.genres.length > 0 ? s.genres : info?.genres || s.genres,
+              posterUrl: s.posterUrl || info?.posterUrl || null,
+              synopsis: s.synopsis || info?.synopsis || "",
+            }
+          : s
+      );
+      showsRef.current = next;
+      persist(next);
+    } finally {
+      setPendingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   }, [persist]);
 
   const saveShow = (show) => {
@@ -572,8 +602,6 @@ export default function ReelLog() {
     const next = exists ? list.map((s) => (s.id === show.id ? show : s)) : [show, ...list];
     showsRef.current = next;
     persist(next);
-    setShowForm(false);
-    setEditing(null);
     if (show.genres.length === 0 || !show.posterUrl) {
       // Save is already done — TMDB lookup runs immediately in the
       // background. The "retry" button on the card is only a fallback for
@@ -638,7 +666,7 @@ export default function ReelLog() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowSettings(true)}
-              className="p-2.5 rounded-md transition-colors hover:bg-white/5"
+              className="p-2.5 rounded-md hover:bg-white/5 active:scale-90 transition-all duration-150"
               style={{ border: `1px solid ${BORDER}`, color: TEXT_MUTED }}
               title="Settings"
             >
@@ -646,7 +674,7 @@ export default function ReelLog() {
             </button>
             <button
               onClick={() => { setEditing(null); setShowForm(true); }}
-              className="flex items-center gap-2 px-4 py-2 rounded-md font-semibold transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-md font-semibold hover:opacity-90 active:scale-[0.97] transition-all duration-150"
               style={{ background: ACCENT, color: BG }}
             >
               <Plus className="w-4 h-4" /> Add show
@@ -667,7 +695,7 @@ export default function ReelLog() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className="px-4 py-1.5 rounded-md text-sm font-semibold uppercase tracking-wide transition-colors"
+              className={`px-4 py-1.5 rounded-md text-sm font-semibold uppercase tracking-wide transition-all duration-150 active:scale-[0.97] ${tab === t ? "hover:opacity-90" : "hover:bg-white/5"}`}
               style={{
                 background: tab === t ? ACCENT : "transparent",
                 color: tab === t ? BG : TEXT_MUTED,
@@ -682,7 +710,7 @@ export default function ReelLog() {
         {shows === null && <p style={{ color: TEXT_MUTED }}>Loading your log...</p>}
 
         {shows !== null && tab === "log" && (
-          <>
+          <div className="animate-tabIn">
             <div className="flex flex-wrap gap-2 mb-5 items-center">
               <div className="relative flex-1 min-w-[180px]">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: TEXT_MUTED }} />
@@ -698,7 +726,7 @@ export default function ReelLog() {
                 <button
                   key={s}
                   onClick={() => setFilterStatus(s)}
-                  className="px-3 py-2 rounded-md text-xs font-semibold uppercase transition-colors"
+                  className={`px-3 py-2 rounded-md text-xs font-semibold uppercase transition-all duration-150 active:scale-[0.97] ${filterStatus === s ? "hover:opacity-90" : "hover:bg-white/5"}`}
                   style={{
                     background: filterStatus === s ? TEXT : "transparent",
                     color: filterStatus === s ? BG : TEXT_MUTED,
@@ -715,7 +743,7 @@ export default function ReelLog() {
                 <button
                   key={t}
                   onClick={() => setFilterType(t)}
-                  className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 active:scale-[0.97] ${filterType === t ? "hover:opacity-90" : "hover:bg-white/5"}`}
                   style={{
                     background: filterType === t ? ACCENT : "transparent",
                     color: filterType === t ? BG : TEXT_MUTED,
@@ -745,15 +773,16 @@ export default function ReelLog() {
                     onDelete={deleteShow}
                     onRewatch={rewatch}
                     onFetchDetails={fetchDetailsForShow}
+                    fetching={pendingIds.has(show.id)}
                   />
                 ))}
               </div>
             )}
-          </>
+          </div>
         )}
 
         {shows !== null && tab === "insights" && stats && (
-          <div className="space-y-5">
+          <div className="space-y-5 animate-tabIn">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
                 ["Total logged", stats.total, TEXT],
