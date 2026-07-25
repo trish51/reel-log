@@ -1,53 +1,9 @@
-const STORAGE_KEY = "reel-log:anthropic-key";
+import { buildRecommendationPrompt, parseRecommendationResponse } from "./recommendationPrompt";
+
 const ANTHROPIC_MODEL = "claude-opus-5";
 
-export function getAnthropicKey() {
-  try {
-    return localStorage.getItem(STORAGE_KEY) || "";
-  } catch {
-    return "";
-  }
-}
-
-export function setAnthropicKey(key) {
-  try {
-    if (key) localStorage.setItem(STORAGE_KEY, key);
-    else localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // localStorage unavailable — silently no-op
-  }
-}
-
-export async function getWatchNextRecommendations(shows) {
-  const apiKey = getAnthropicKey();
-  if (!apiKey) {
-    throw new Error("No Anthropic API key set. Add one in Settings.");
-  }
-
-  const loved = shows
-    .filter((s) => s.rating === "loved")
-    .map((s) => `${s.title} (${s.genres.join("/")}) — ${s.notes || "no notes"}`);
-  const liked = shows.filter((s) => s.rating === "liked").map((s) => s.title);
-  const disliked = shows
-    .filter((s) => s.rating === "disliked" || s.rating === "meh")
-    .map((s) => s.title);
-  const owned = shows.map((s) => s.title.toLowerCase());
-
-  const prompt = `You are a sharp, well-read TV recommendation engine. Based on this person's viewing history, suggest 5 TV shows they have not seen yet.
-
-LOVED (weight heavily, pay attention to the notes on what specifically they liked):
-${loved.join("\n") || "none yet"}
-
-LIKED:
-${liked.join(", ") || "none yet"}
-
-DISLIKED / MEH (avoid shows too similar to these):
-${disliked.join(", ") || "none yet"}
-
-Do not suggest any show already in this list: ${owned.join(", ")}
-
-Respond with ONLY raw JSON, no markdown fences, no preamble, in exactly this shape:
-{"recommendations":[{"title":"...","genres":["...","..."],"reason":"one or two sentences on why this fits their taste specifically"}]}`;
+export async function getAnthropicRecommendations(shows, apiKey) {
+  const prompt = buildRecommendationPrompt(shows);
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -73,7 +29,5 @@ Respond with ONLY raw JSON, no markdown fences, no preamble, in exactly this sha
 
   const data = await res.json();
   const textBlock = data.content?.find((c) => c.type === "text");
-  const clean = (textBlock?.text || "").replace(/```json|```/g, "").trim();
-  const parsed = JSON.parse(clean);
-  return Array.isArray(parsed.recommendations) ? parsed.recommendations : [];
+  return parseRecommendationResponse(textBlock?.text || "");
 }
