@@ -1,5 +1,28 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Film, Plus, X, Search, Sparkles, RotateCcw, Trash2, Heart, ThumbsUp, Meh, ThumbsDown, Loader2, ChevronDown, Tag, Tv, Clapperboard, MoreHorizontal } from "lucide-react";
+import {
+  Film,
+  Plus,
+  X,
+  Search,
+  Sparkles,
+  RotateCcw,
+  Trash2,
+  Heart,
+  ThumbsUp,
+  Meh,
+  ThumbsDown,
+  Loader2,
+  ChevronDown,
+  Tag,
+  Tv,
+  Clapperboard,
+  MoreHorizontal,
+  Settings,
+  ImageOff,
+} from "lucide-react";
+import { fetchTmdbInfo } from "./lib/tmdb";
+import { getAnthropicKey, getWatchNextRecommendations } from "./lib/anthropic";
+import SettingsPanel from "./components/SettingsPanel";
 
 const STATUS = {
   want: { label: "Want to Watch", color: "#F2A93B" },
@@ -23,59 +46,24 @@ const RATINGS = {
 const STORAGE_KEY = "reel-log:shows";
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
-async function detectGenres(title, contentType = "tv") {
-  const typeLabel = CONTENT_TYPE[contentType]?.label || "title";
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
-  try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 200,
-        messages: [
-          {
-            role: "user",
-            content: `Give up to 3 concise genre/category tags for the ${typeLabel} titled "${title}". Respond with ONLY raw JSON, no markdown fences, no preamble: {"genres": ["Tag1","Tag2","Tag3"]}. If you don't recognize the exact title, make a reasonable guess from the name and context rather than returning an empty list.`,
-          },
-        ],
-      }),
-    });
-    const data = await res.json();
-    const textBlock = data.content.find((c) => c.type === "text");
-    const clean = (textBlock?.text || "").replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean);
-    return Array.isArray(parsed.genres) ? parsed.genres.slice(0, 3) : [];
-  } catch {
-    return [];
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
 function useShows() {
   const [shows, setShows] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await window.storage.get(STORAGE_KEY, false);
-        setShows(res ? JSON.parse(res.value) : []);
-      } catch {
-        setShows([]);
-      }
-    })();
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      setShows(raw ? JSON.parse(raw) : []);
+    } catch {
+      setShows([]);
+    }
   }, []);
 
-  const persist = useCallback(async (next) => {
+  const persist = useCallback((next) => {
     setShows(next);
     try {
-      const res = await window.storage.set(STORAGE_KEY, JSON.stringify(next), false);
-      if (!res) setError("Couldn't save — try again.");
-      else setError(null);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      setError(null);
     } catch {
       setError("Couldn't save — try again.");
     }
@@ -106,14 +94,32 @@ function Stamp({ ratingKey, size = "md" }) {
   );
 }
 
-function ShowCard({ show, onEdit, onDelete, onRewatch, onDetectGenres }) {
-  const status = STATUS[show.status];
-  const [detecting, setDetecting] = useState(false);
+function Poster({ posterUrl, contentType }) {
+  const Icon = CONTENT_TYPE[contentType || "tv"].Icon;
+  return (
+    <div
+      className="w-20 shrink-0 self-stretch overflow-hidden"
+      style={{ background: "#14171C", borderRight: "1px solid #333944" }}
+    >
+      {posterUrl ? (
+        <img src={posterUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <Icon className="w-6 h-6" style={{ color: "#333944" }} />
+        </div>
+      )}
+    </div>
+  );
+}
 
-  const runDetect = async () => {
-    setDetecting(true);
-    await onDetectGenres(show.id, show.contentType);
-    setDetecting(false);
+function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails }) {
+  const status = STATUS[show.status];
+  const [fetching, setFetching] = useState(false);
+
+  const runFetch = async () => {
+    setFetching(true);
+    await onFetchDetails(show.id, show.contentType);
+    setFetching(false);
   };
 
   return (
@@ -121,6 +127,8 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onDetectGenres }) {
       className="relative rounded-lg overflow-hidden flex"
       style={{ background: "#1C2129", border: `1px solid ${status.color}33` }}
     >
+      <Poster posterUrl={show.posterUrl} contentType={show.contentType} />
+
       <div className="flex-1 p-4 min-w-0">
         <div className="flex items-start justify-between gap-2">
           <h3
@@ -161,16 +169,21 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onDetectGenres }) {
           </div>
         ) : (
           <button
-            onClick={runDetect}
-            disabled={detecting}
+            onClick={runFetch}
+            disabled={fetching}
             className="mt-2 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded disabled:opacity-50"
             style={{ background: "#232935", color: "#F2A93B", fontFamily: "'IBM Plex Mono', monospace" }}
           >
-            {detecting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-            {detecting ? "detecting..." : "detect genre"}
+            {fetching ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageOff className="w-3 h-3" />}
+            {fetching ? "looking up..." : "fetch poster & genres"}
           </button>
         )}
 
+        {show.synopsis && !show.notes && (
+          <p className="text-sm mt-2 line-clamp-3" style={{ color: "#7C8493" }}>
+            {show.synopsis}
+          </p>
+        )}
         {show.notes && (
           <p className="text-sm mt-2 line-clamp-3" style={{ color: "#B7BEC8" }}>
             {show.notes}
@@ -208,15 +221,6 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onDetectGenres }) {
           </div>
         </div>
       </div>
-      <div
-        className="w-3 shrink-0"
-        style={{
-          backgroundImage: "radial-gradient(circle, #14171C 2.5px, transparent 2.5px)",
-          backgroundSize: "12px 12px",
-          backgroundPosition: "center",
-          borderLeft: "1px dashed #33394450",
-        }}
-      />
     </div>
   );
 }
@@ -253,6 +257,8 @@ function ShowForm({ initial, onSave, onClose }) {
       contentType,
       status,
       genres: finalGenres,
+      posterUrl: titleOrTypeChanged ? null : initial?.posterUrl || null,
+      synopsis: titleOrTypeChanged ? "" : initial?.synopsis || "",
       rating: status === "watched" ? rating : null,
       notes: notes.trim(),
       rewatchCount: initial?.rewatchCount || 0,
@@ -384,7 +390,7 @@ function ShowForm({ initial, onSave, onClose }) {
 
             <div>
               <label className="text-xs uppercase tracking-wide" style={{ color: "#9AA1AC" }}>
-                Genres <span style={{ color: "#666D78" }}>(auto-detected on save — edit if it's off)</span>
+                Genres <span style={{ color: "#666D78" }}>(auto-detected via TMDB — edit if it's off)</span>
               </label>
               <input
                 value={genres.join(", ")}
@@ -431,49 +437,17 @@ function Recommendations({ shows }) {
   const [loading, setLoading] = useState(false);
   const [recs, setRecs] = useState(null);
   const [error, setError] = useState(null);
+  const hasKey = Boolean(getAnthropicKey());
 
   const getRecs = async () => {
     setLoading(true);
     setError(null);
     setRecs(null);
     try {
-      const loved = shows.filter((s) => s.rating === "loved").map((s) => `${s.title} (${s.genres.join("/")}) — ${s.notes || "no notes"}`);
-      const liked = shows.filter((s) => s.rating === "liked").map((s) => s.title);
-      const disliked = shows.filter((s) => s.rating === "disliked" || s.rating === "meh").map((s) => s.title);
-      const owned = shows.map((s) => s.title.toLowerCase());
-
-      const prompt = `You are a sharp, well-read TV recommendation engine. Based on this person's viewing history, suggest 5 TV shows they have not seen yet.
-
-LOVED (weight heavily, pay attention to the notes on what specifically they liked):
-${loved.join("\n") || "none yet"}
-
-LIKED:
-${liked.join(", ") || "none yet"}
-
-DISLIKED / MEH (avoid shows too similar to these):
-${disliked.join(", ") || "none yet"}
-
-Do not suggest any show already in this list: ${owned.join(", ")}
-
-Respond with ONLY raw JSON, no markdown fences, no preamble, in exactly this shape:
-{"recommendations":[{"title":"...","genres":["...","..."],"reason":"one or two sentences on why this fits their taste specifically"}]}`;
-
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          messages: [{ role: "user", content: prompt }],
-        }),
-      });
-      const data = await response.json();
-      const textBlock = data.content.find((c) => c.type === "text");
-      const clean = (textBlock?.text || "").replace(/```json|```/g, "").trim();
-      const parsed = JSON.parse(clean);
-      setRecs(parsed.recommendations || []);
+      const recommendations = await getWatchNextRecommendations(shows);
+      setRecs(recommendations);
     } catch (e) {
-      setError("Couldn't generate recommendations right now — try again in a moment.");
+      setError(e.message || "Couldn't generate recommendations right now — try again in a moment.");
     } finally {
       setLoading(false);
     }
@@ -492,7 +466,7 @@ Respond with ONLY raw JSON, no markdown fences, no preamble, in exactly this sha
         </div>
         <button
           onClick={getRecs}
-          disabled={loading || ratedCount === 0}
+          disabled={loading || ratedCount === 0 || !hasKey}
           className="px-4 py-1.5 rounded-md text-sm font-semibold disabled:opacity-40 flex items-center gap-2"
           style={{ background: "#F2A93B", color: "#14171C" }}
         >
@@ -501,7 +475,12 @@ Respond with ONLY raw JSON, no markdown fences, no preamble, in exactly this sha
         </button>
       </div>
 
-      {ratedCount === 0 && (
+      {!hasKey && (
+        <p className="text-sm mt-3" style={{ color: "#9AA1AC" }}>
+          Add your Anthropic API key in Settings (top right) to enable recommendations.
+        </p>
+      )}
+      {hasKey && ratedCount === 0 && (
         <p className="text-sm mt-3" style={{ color: "#9AA1AC" }}>
           Rate a few shows as watched first — the more notes you leave, the sharper these get.
         </p>
@@ -539,6 +518,7 @@ export default function ReelLog() {
   useEffect(() => { showsRef.current = shows; }, [shows]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [showSettings, setShowSettings] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [search, setSearch] = useState("");
@@ -552,9 +532,9 @@ export default function ReelLog() {
     persist(next);
     setShowForm(false);
     setEditing(null);
-    if (show.genres.length === 0) {
-      // Save is already done — genre detection runs quietly in the background.
-      detectGenresForShow(show.id, show.contentType, show.title);
+    if (show.genres.length === 0 || !show.posterUrl) {
+      // Save is already done — TMDB lookup runs quietly in the background.
+      fetchDetailsForShow(show.id, show.contentType, show.title);
     }
   };
 
@@ -566,13 +546,22 @@ export default function ReelLog() {
     persist((shows || []).map((s) => (s.id === id ? { ...s, rewatchCount: (s.rewatchCount || 0) + 1 } : s)));
   };
 
-  const detectGenresForShow = async (id, contentType, titleOverride) => {
+  const fetchDetailsForShow = async (id, contentType, titleOverride) => {
     const existing = (showsRef.current || []).find((s) => s.id === id);
     const title = titleOverride || existing?.title;
     if (!title) return;
-    const genres = await detectGenres(title, contentType || existing?.contentType || "tv");
+    const info = await fetchTmdbInfo(title, contentType || existing?.contentType || "tv");
     const latest = showsRef.current || [];
-    const next = latest.map((s) => (s.id === id ? { ...s, genres } : s));
+    const next = latest.map((s) =>
+      s.id === id
+        ? {
+            ...s,
+            genres: s.genres.length > 0 ? s.genres : info?.genres || s.genres,
+            posterUrl: s.posterUrl || info?.posterUrl || null,
+            synopsis: s.synopsis || info?.synopsis || "",
+          }
+        : s
+    );
     showsRef.current = next;
     persist(next);
   };
@@ -606,12 +595,6 @@ export default function ReelLog() {
 
   return (
     <div className="min-h-screen" style={{ background: "#14171C" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap');
-        * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
-        .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-      `}</style>
-
       <div
         className="px-6 py-8 border-b"
         style={{ borderColor: "#232935", background: "linear-gradient(180deg, #1A1E25 0%, #14171C 100%)" }}
@@ -628,13 +611,23 @@ export default function ReelLog() {
               <p style={{ color: "#9AA1AC", fontSize: "13px" }}>Your running record of everything watched.</p>
             </div>
           </div>
-          <button
-            onClick={() => { setEditing(null); setShowForm(true); }}
-            className="flex items-center gap-2 px-4 py-2 rounded-md font-semibold"
-            style={{ background: "#F2A93B", color: "#14171C" }}
-          >
-            <Plus className="w-4 h-4" /> Add show
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-2.5 rounded-md"
+              style={{ border: "1px solid #333944", color: "#9AA1AC" }}
+              title="Settings"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => { setEditing(null); setShowForm(true); }}
+              className="flex items-center gap-2 px-4 py-2 rounded-md font-semibold"
+              style={{ background: "#F2A93B", color: "#14171C" }}
+            >
+              <Plus className="w-4 h-4" /> Add show
+            </button>
+          </div>
         </div>
       </div>
 
@@ -727,7 +720,7 @@ export default function ReelLog() {
                     onEdit={(s) => { setEditing(s); setShowForm(true); }}
                     onDelete={deleteShow}
                     onRewatch={rewatch}
-                    onDetectGenres={detectGenresForShow}
+                    onFetchDetails={fetchDetailsForShow}
                   />
                 ))}
               </div>
@@ -800,6 +793,8 @@ export default function ReelLog() {
           onClose={() => { setShowForm(false); setEditing(null); }}
         />
       )}
+
+      {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
