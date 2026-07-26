@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 import { CONTENT_TYPE, RATINGS } from "../constants";
 import { ACCENT, BG, BORDER } from "../theme";
 
@@ -24,12 +25,14 @@ export function Stamp({ ratingKey, size = "md" }) {
   );
 }
 
-export function Poster({ posterUrl, contentType, rating, showRating, loading, variant = "thumbnail" }) {
+export function Poster({ posterUrl, contentType, rating, showRating, loading, variant = "thumbnail", layoutId }) {
   const Icon = CONTENT_TYPE[contentType || "tv"].Icon;
   const isFull = variant === "full";
   return (
-    <div
-      className={`relative aspect-[2/3] overflow-hidden ${isFull ? "w-full" : "w-32 sm:w-36 shrink-0"}`}
+    <motion.div
+      layout
+      layoutId={layoutId}
+      className={`relative overflow-hidden ${isFull ? "w-full h-full" : "w-32 sm:w-36 shrink-0 aspect-[2/3]"}`}
       style={{ background: BG, borderRight: isFull ? "none" : `1px solid ${BORDER}` }}
     >
       {posterUrl ? (
@@ -53,6 +56,6 @@ export function Poster({ posterUrl, contentType, rating, showRating, loading, va
           <Stamp ratingKey={rating} size="sm" />
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

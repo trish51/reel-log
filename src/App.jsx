@@ -49,37 +49,35 @@ function useShows() {
   return { shows, persist, error };
 }
 
-function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching, onCollapse }) {
+function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching, onCollapse, posterLayoutId }) {
   const status = STATUS[show.status];
 
-  const runFetch = () => {
+  const runFetch = (e) => {
+    e.stopPropagation();
     onFetchDetails(show.id, show.contentType);
   };
 
+  const Content = onCollapse ? motion.div : "div";
+  const contentAnimProps = onCollapse
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.2, delay: 0.15 } }
+    : {};
+
   return (
     <div
-      className="relative rounded-xl overflow-hidden flex transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_rgba(157,124,242,0.3)]"
+      onClick={onCollapse}
+      className={`relative rounded-xl overflow-hidden flex transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_rgba(157,124,242,0.3)] ${onCollapse ? "cursor-pointer" : ""}`}
       style={{ background: PANEL, border: `1px solid ${status.color}33` }}
     >
-      {onCollapse && (
-        <button
-          onClick={onCollapse}
-          className="absolute top-2 right-2 z-10 p-1 rounded-full hover:bg-white/10 active:scale-90 transition-all duration-150"
-          style={{ background: "#0A0C0FCC" }}
-          title="Collapse"
-        >
-          <X className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
-        </button>
-      )}
       <Poster
         posterUrl={show.posterUrl}
         contentType={show.contentType}
         rating={show.rating}
         showRating={show.status === "watched"}
         loading={fetching}
+        layoutId={posterLayoutId}
       />
 
-      <div className="flex-1 p-5 min-w-0">
+      <Content className="flex-1 p-5 min-w-0" {...contentAnimProps}>
         <div className="flex items-start justify-between gap-2">
           <h3
             className="text-xl font-bold leading-tight truncate min-w-0"
@@ -162,22 +160,22 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching,
           <div className="flex items-center gap-1">
             {show.status === "watched" && (
               <button
-                onClick={() => onRewatch(show.id)}
+                onClick={(e) => { e.stopPropagation(); onRewatch(show.id); }}
                 className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150"
                 title="Log a rewatch"
               >
                 <RotateCcw className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
               </button>
             )}
-            <button onClick={() => onEdit(show)} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="Edit">
+            <button onClick={(e) => { e.stopPropagation(); onEdit(show); }} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="Edit">
               <Tag className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
             </button>
-            <button onClick={() => onDelete(show.id)} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="Remove">
+            <button onClick={(e) => { e.stopPropagation(); onDelete(show.id); }} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="Remove">
               <Trash2 className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
             </button>
           </div>
         </div>
-      </div>
+      </Content>
     </div>
   );
 }
@@ -190,7 +188,7 @@ function CompactShowCard({ show, onExpand }) {
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter") onExpand(); }}
-      className="rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_10px_24px_-8px_rgba(157,124,242,0.4)]"
+      className="rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_10px_24px_-8px_rgba(157,124,242,0.4)] h-[220px] aspect-[2/3]"
       style={{ background: PANEL, border: `1px solid ${status.color}33` }}
       title={show.title}
     >
@@ -200,6 +198,7 @@ function CompactShowCard({ show, onExpand }) {
         rating={show.rating}
         showRating={show.status === "watched"}
         variant="full"
+        layoutId={`poster-${show.id}`}
       />
     </div>
   );
@@ -696,16 +695,11 @@ export default function ReelLog() {
                 </p>
               </div>
             ) : viewMode === "compact" ? (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-3">
+              <div className="grid grid-cols-[repeat(auto-fill,147px)] grid-flow-dense gap-3">
                 {filtered.map((show) => {
                   const isExpanded = expandedId === show.id;
                   return (
-                    <motion.div
-                      key={show.id}
-                      layout
-                      layoutId={`card-${show.id}`}
-                      className={isExpanded ? "col-span-full justify-self-start w-full max-w-md" : ""}
-                    >
+                    <motion.div key={show.id} layout className={isExpanded ? "col-span-3" : ""}>
                       {isExpanded ? (
                         <ShowCard
                           show={show}
@@ -715,6 +709,7 @@ export default function ReelLog() {
                           onFetchDetails={fetchDetailsForShow}
                           fetching={pendingIds.has(show.id)}
                           onCollapse={() => setExpandedId(null)}
+                          posterLayoutId={`poster-${show.id}`}
                         />
                       ) : (
                         <CompactShowCard show={show} onExpand={() => setExpandedId(show.id)} />
