@@ -695,12 +695,18 @@ export default function ReelLog() {
                   {shows.length === 0 ? "Nothing logged yet — add your first show." : "No shows match this filter."}
                 </p>
               </div>
-            ) : (
-              <div className="grid sm:grid-cols-2 2xl:grid-cols-3 gap-4">
-                {filtered.map((show) =>
-                  viewMode === "compact" ? (
-                    <motion.div key={show.id} layout layoutId={`card-${show.id}`}>
-                      {expandedId === show.id ? (
+            ) : viewMode === "compact" ? (
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] gap-3">
+                {filtered.map((show) => {
+                  const isExpanded = expandedId === show.id;
+                  return (
+                    <motion.div
+                      key={show.id}
+                      layout
+                      layoutId={`card-${show.id}`}
+                      className={isExpanded ? "col-span-full justify-self-start w-full max-w-md" : ""}
+                    >
+                      {isExpanded ? (
                         <ShowCard
                           show={show}
                           onEdit={(s) => { setEditing(s); setShowForm(true); }}
@@ -714,18 +720,22 @@ export default function ReelLog() {
                         <CompactShowCard show={show} onExpand={() => setExpandedId(show.id)} />
                       )}
                     </motion.div>
-                  ) : (
-                    <ShowCard
-                      key={show.id}
-                      show={show}
-                      onEdit={(s) => { setEditing(s); setShowForm(true); }}
-                      onDelete={deleteShow}
-                      onRewatch={rewatch}
-                      onFetchDetails={fetchDetailsForShow}
-                      fetching={pendingIds.has(show.id)}
-                    />
-                  )
-                )}
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 2xl:grid-cols-3 gap-4">
+                {filtered.map((show) => (
+                  <ShowCard
+                    key={show.id}
+                    show={show}
+                    onEdit={(s) => { setEditing(s); setShowForm(true); }}
+                    onDelete={deleteShow}
+                    onRewatch={rewatch}
+                    onFetchDetails={fetchDetailsForShow}
+                    fetching={pendingIds.has(show.id)}
+                  />
+                ))}
               </div>
             )}
           </div>
