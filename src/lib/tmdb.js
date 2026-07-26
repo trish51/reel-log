@@ -7,6 +7,7 @@ export async function fetchTmdbInfo(title, contentType = "tv") {
     if (!res.ok) return null;
     const data = await res.json();
     return {
+      title: data.title || title,
       posterUrl: data.posterUrl || null,
       synopsis: data.synopsis || "",
       genres: Array.isArray(data.genres) ? data.genres.slice(0, 3) : [],
