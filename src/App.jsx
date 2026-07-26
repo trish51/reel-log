@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { motion } from "framer-motion";
 import {
   Film,
   Plus,
@@ -48,7 +49,7 @@ function useShows() {
   return { shows, persist, error };
 }
 
-function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching }) {
+function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching, onCollapse }) {
   const status = STATUS[show.status];
 
   const runFetch = () => {
@@ -60,6 +61,16 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching 
       className="relative rounded-xl overflow-hidden flex transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_rgba(157,124,242,0.3)]"
       style={{ background: PANEL, border: `1px solid ${status.color}33` }}
     >
+      {onCollapse && (
+        <button
+          onClick={onCollapse}
+          className="absolute top-2 right-2 z-10 p-1 rounded-full hover:bg-white/10 active:scale-90 transition-all duration-150"
+          style={{ background: "#0A0C0FCC" }}
+          title="Collapse"
+        >
+          <X className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
+        </button>
+      )}
       <Poster
         posterUrl={show.posterUrl}
         contentType={show.contentType}
@@ -108,15 +119,22 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching 
             ))}
           </div>
         ) : (
-          <button
-            onClick={runFetch}
-            disabled={fetching}
-            className="mt-2 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded disabled:opacity-50 hover:brightness-125 active:scale-95 transition-all duration-150"
-            style={{ background: PANEL_ALT, color: ACCENT, fontFamily: "'IBM Plex Mono', monospace" }}
-          >
-            {fetching ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-            {fetching ? "looking up..." : "retry poster & genre lookup"}
-          </button>
+          <>
+            <button
+              onClick={runFetch}
+              disabled={fetching}
+              className="mt-2 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded disabled:opacity-50 hover:brightness-125 active:scale-95 transition-all duration-150"
+              style={{ background: PANEL_ALT, color: ACCENT, fontFamily: "'IBM Plex Mono', monospace" }}
+            >
+              {fetching ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+              {fetching ? "looking up..." : "retry poster & genre lookup"}
+            </button>
+            {show.tmdbUnmatched && !fetching && (
+              <p className="text-[10px] mt-1" style={{ color: DANGER }}>
+                Not found — double check the spelling and try again.
+              </p>
+            )}
+          </>
         )}
 
         {show.synopsis && !show.notes && (
@@ -160,6 +178,29 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching 
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function CompactShowCard({ show, onExpand }) {
+  const status = STATUS[show.status];
+  return (
+    <div
+      onClick={onExpand}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter") onExpand(); }}
+      className="rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_10px_24px_-8px_rgba(157,124,242,0.4)]"
+      style={{ background: PANEL, border: `1px solid ${status.color}33` }}
+      title={show.title}
+    >
+      <Poster
+        posterUrl={show.posterUrl}
+        contentType={show.contentType}
+        rating={show.rating}
+        showRating={show.status === "watched"}
+        variant="full"
+      />
     </div>
   );
 }
@@ -226,7 +267,7 @@ function ShowForm({ initial, onSave, onClose }) {
       >
         <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
           <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "24px", color: TEXT, letterSpacing: "0.5px" }}>
-            {initial ? "Edit entry" : "Add a show"}
+            {initial ? "Edit entry" : "Add a title"}
           </h2>
           <button
             type="button"
@@ -407,6 +448,21 @@ export default function ReelLog() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("log");
   const [pendingIds, setPendingIds] = useState(() => new Set());
+  const [viewMode, setViewMode] = useState(() => {
+    try {
+      return localStorage.getItem("reel-log:view-mode") || "default";
+    } catch {
+      return "default";
+    }
+  });
+  const [expandedId, setExpandedId] = useState(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("reel-log:view-mode", viewMode);
+    } catch {}
+    if (viewMode !== "compact") setExpandedId(null);
+  }, [viewMode]);
 
   const fetchDetailsForShow = useCallback(async (id, contentType, titleOverride) => {
     setPendingIds((prev) => new Set(prev).add(id));
@@ -420,9 +476,11 @@ export default function ReelLog() {
         s.id === id
           ? {
               ...s,
+              title: info?.title || s.title,
               genres: s.genres.length > 0 ? s.genres : info?.genres || s.genres,
               posterUrl: s.posterUrl || info?.posterUrl || null,
               synopsis: s.synopsis || info?.synopsis || "",
+              tmdbUnmatched: !info,
             }
           : s
       );
@@ -470,6 +528,7 @@ export default function ReelLog() {
 
   const deleteShow = (id) => {
     persist((shows || []).filter((s) => s.id !== id));
+    setExpandedId((prev) => (prev === id ? null : prev));
   };
 
   const rewatch = (id) => {
@@ -535,7 +594,7 @@ export default function ReelLog() {
               className="flex items-center gap-2 px-4 py-2 rounded-md font-semibold hover:opacity-90 active:scale-[0.97] transition-all duration-150"
               style={{ background: ACCENT, color: BG }}
             >
-              <Plus className="w-4 h-4" /> Add show
+              <Plus className="w-4 h-4" /> Add Title
             </button>
           </div>
         </div>
@@ -612,6 +671,21 @@ export default function ReelLog() {
                   {t === "all" ? "All Types" : CONTENT_TYPE[t].label}
                 </button>
               ))}
+              <div className="flex items-center gap-1 ml-auto rounded-md p-0.5" style={{ border: `1px solid ${BORDER}` }}>
+                {["default", "compact"].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setViewMode(m)}
+                    className={`px-3 py-1.5 rounded text-xs font-semibold uppercase tracking-wide transition-all duration-150 active:scale-[0.97] ${viewMode === m ? "hover:opacity-90" : "hover:bg-white/5"}`}
+                    style={{
+                      background: viewMode === m ? ACCENT : "transparent",
+                      color: viewMode === m ? BG : TEXT_MUTED,
+                    }}
+                  >
+                    {m === "default" ? "Default" : "Compact"}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {filtered.length === 0 ? (
@@ -623,17 +697,35 @@ export default function ReelLog() {
               </div>
             ) : (
               <div className="grid sm:grid-cols-2 2xl:grid-cols-3 gap-4">
-                {filtered.map((show) => (
-                  <ShowCard
-                    key={show.id}
-                    show={show}
-                    onEdit={(s) => { setEditing(s); setShowForm(true); }}
-                    onDelete={deleteShow}
-                    onRewatch={rewatch}
-                    onFetchDetails={fetchDetailsForShow}
-                    fetching={pendingIds.has(show.id)}
-                  />
-                ))}
+                {filtered.map((show) =>
+                  viewMode === "compact" ? (
+                    <motion.div key={show.id} layout layoutId={`card-${show.id}`}>
+                      {expandedId === show.id ? (
+                        <ShowCard
+                          show={show}
+                          onEdit={(s) => { setEditing(s); setShowForm(true); }}
+                          onDelete={deleteShow}
+                          onRewatch={rewatch}
+                          onFetchDetails={fetchDetailsForShow}
+                          fetching={pendingIds.has(show.id)}
+                          onCollapse={() => setExpandedId(null)}
+                        />
+                      ) : (
+                        <CompactShowCard show={show} onExpand={() => setExpandedId(show.id)} />
+                      )}
+                    </motion.div>
+                  ) : (
+                    <ShowCard
+                      key={show.id}
+                      show={show}
+                      onEdit={(s) => { setEditing(s); setShowForm(true); }}
+                      onDelete={deleteShow}
+                      onRewatch={rewatch}
+                      onFetchDetails={fetchDetailsForShow}
+                      fetching={pendingIds.has(show.id)}
+                    />
+                  )
+                )}
               </div>
             )}
           </div>

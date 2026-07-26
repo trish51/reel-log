@@ -24,12 +24,13 @@ export function Stamp({ ratingKey, size = "md" }) {
   );
 }
 
-export function Poster({ posterUrl, contentType, rating, showRating, loading }) {
+export function Poster({ posterUrl, contentType, rating, showRating, loading, variant = "thumbnail" }) {
   const Icon = CONTENT_TYPE[contentType || "tv"].Icon;
+  const isFull = variant === "full";
   return (
     <div
-      className="relative w-32 sm:w-36 shrink-0 aspect-[2/3] overflow-hidden"
-      style={{ background: BG, borderRight: `1px solid ${BORDER}` }}
+      className={`relative aspect-[2/3] overflow-hidden ${isFull ? "w-full" : "w-32 sm:w-36 shrink-0"}`}
+      style={{ background: BG, borderRight: isFull ? "none" : `1px solid ${BORDER}` }}
     >
       {posterUrl ? (
         <img src={posterUrl} alt="" className="w-full h-full object-cover" loading="lazy" />

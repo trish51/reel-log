@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { Sparkles, Loader2, ChevronDown, Plus, Check } from "lucide-react";
+import { Sparkles, Loader2, ChevronDown, Plus, Check, AlertTriangle } from "lucide-react";
 import { fetchTmdbInfo } from "../lib/tmdb";
 import { getWatchNextRecommendations } from "../lib/ai";
 import { PROVIDERS, getActiveProvider, hasActiveProviderKey } from "../lib/providers";
 import { Poster, Stamp } from "./Poster";
+import { CONTENT_TYPE } from "../constants";
 import { ACCENT, BG, PANEL, PANEL_ALT, BORDER, TEXT, TEXT_MUTED, TEXT_DIM, TEXT_BODY, DANGER } from "../theme";
 
 const MAX_GENRE_SCOPE_SHOWS = 25;
@@ -93,6 +94,7 @@ function RecommendationCard({ rec, details, onAdd, added }) {
 export default function RecommendationsPanel({ shows, onAddToLog }) {
   const [scopeMode, setScopeMode] = useState("recent");
   const [selectedGenres, setSelectedGenres] = useState([]);
+  const [selectedContentTypes, setSelectedContentTypes] = useState([]);
   const [selectedShowIds, setSelectedShowIds] = useState([]);
   const [showRecentTitles, setShowRecentTitles] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -124,9 +126,14 @@ export default function RecommendationsPanel({ shows, onAddToLog }) {
   const genreScopedShows = useMemo(() => {
     if (selectedGenres.length === 0) return [];
     return shows
-      .filter((s) => (s.rating === "loved" || s.rating === "liked") && s.genres.some((g) => selectedGenres.includes(g)))
+      .filter(
+        (s) =>
+          (s.rating === "loved" || s.rating === "liked") &&
+          s.genres.some((g) => selectedGenres.includes(g)) &&
+          (selectedContentTypes.length === 0 || selectedContentTypes.includes(s.contentType || "tv"))
+      )
       .slice(0, MAX_GENRE_SCOPE_SHOWS);
-  }, [shows, selectedGenres]);
+  }, [shows, selectedGenres, selectedContentTypes]);
 
   const specificScopedShows = useMemo(() => {
     return shows.filter((s) => selectedShowIds.includes(s.id));
@@ -140,13 +147,17 @@ export default function RecommendationsPanel({ shows, onAddToLog }) {
 
   const scopeLabel = useMemo(() => {
     if (scopeMode === "genre") {
-      return selectedGenres.length > 0
+      const base = selectedGenres.length > 0
         ? `shows they loved or liked in these genres: ${selectedGenres.join(", ")}`
         : "shows they loved or liked in a specific genre";
+      if (selectedContentTypes.length > 0) {
+        return `${base} (${selectedContentTypes.map((t) => CONTENT_TYPE[t].label).join(" or ")} only)`;
+      }
+      return base;
     }
     if (scopeMode === "specific") return "a hand-picked set of their shows";
     return "their 5 most recently added shows";
-  }, [scopeMode, selectedGenres]);
+  }, [scopeMode, selectedGenres, selectedContentTypes]);
 
   const emptyScopeReason = useMemo(() => {
     if (!hasKey) return null;
@@ -161,6 +172,10 @@ export default function RecommendationsPanel({ shows, onAddToLog }) {
 
   const toggleGenre = (g) => {
     setSelectedGenres((prev) => (prev.includes(g) ? prev.filter((x) => x !== g) : [...prev, g]));
+  };
+
+  const toggleContentType = (t) => {
+    setSelectedContentTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
   };
 
   const toggleShowPick = (id) => {
@@ -284,32 +299,64 @@ export default function RecommendationsPanel({ shows, onAddToLog }) {
           )}
 
           {scopeMode === "genre" && (
-            <div className="flex flex-wrap gap-1.5 mt-2.5">
-              {libraryGenres.length === 0 ? (
-                <p className="text-xs" style={{ color: TEXT_DIM }}>
-                  No genres in your library yet — add some shows first.
-                </p>
-              ) : (
-                libraryGenres.map((g) => {
-                  const active = selectedGenres.includes(g);
-                  return (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => toggleGenre(g)}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all duration-150 active:scale-95 ${active ? "hover:opacity-90" : "hover:bg-white/5"}`}
-                      style={{
-                        background: active ? ACCENT : "transparent",
-                        color: active ? BG : TEXT_MUTED,
-                        border: `1px solid ${active ? ACCENT : BORDER}`,
-                      }}
-                    >
-                      {g}
-                    </button>
-                  );
-                })
+            <>
+              <div className="flex flex-wrap gap-1.5 mt-2.5">
+                {libraryGenres.length === 0 ? (
+                  <p className="text-xs" style={{ color: TEXT_DIM }}>
+                    No genres in your library yet — add some shows first.
+                  </p>
+                ) : (
+                  libraryGenres.map((g) => {
+                    const active = selectedGenres.includes(g);
+                    return (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => toggleGenre(g)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all duration-150 active:scale-95 ${active ? "hover:opacity-90" : "hover:bg-white/5"}`}
+                        style={{
+                          background: active ? ACCENT : "transparent",
+                          color: active ? BG : TEXT_MUTED,
+                          border: `1px solid ${active ? ACCENT : BORDER}`,
+                        }}
+                      >
+                        {g}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              {libraryGenres.length > 0 && (
+                <>
+                  <p className="text-[11px] mt-2" style={{ color: TEXT_DIM }}>
+                    Narrow by type (optional)
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {Object.entries(CONTENT_TYPE).map(([key, t]) => {
+                      const active = selectedContentTypes.includes(key);
+                      const Icon = t.Icon;
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => toggleContentType(key)}
+                          className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all duration-150 active:scale-95 ${active ? "hover:opacity-90" : "hover:bg-white/5"}`}
+                          style={{
+                            background: active ? ACCENT : "transparent",
+                            color: active ? BG : TEXT_MUTED,
+                            border: `1px solid ${active ? ACCENT : BORDER}`,
+                          }}
+                        >
+                          <Icon className="w-3 h-3" />
+                          {t.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
               )}
-            </div>
+            </>
           )}
 
           {scopeMode === "specific" && (
@@ -332,6 +379,13 @@ export default function RecommendationsPanel({ shows, onAddToLog }) {
                         style={{ accentColor: ACCENT }}
                       />
                       <span className="truncate flex-1">{s.title}</span>
+                      {s.tmdbUnmatched && (
+                        <AlertTriangle
+                          className="w-3.5 h-3.5 shrink-0"
+                          style={{ color: "#C9A44E" }}
+                          title="Couldn't verify this title — recommendations based on it may be less accurate."
+                        />
+                      )}
                       {s.rating && <Stamp ratingKey={s.rating} size="sm" />}
                     </label>
                   );
