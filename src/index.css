@@ -23,10 +23,28 @@
   contain: strict;
 }
 
-.ambient-blob {
+.ambient-blob-shift {
   position: absolute;
   width: 60vmax;
   height: 60vmax;
+  transform: translate(var(--mx, 0px), var(--my, 0px));
+  transition: transform 1.6s ease-out;
+  will-change: transform;
+}
+
+.ambient-blob-shift--a {
+  top: -20vmax;
+  left: -10vmax;
+}
+
+.ambient-blob-shift--b {
+  bottom: -25vmax;
+  right: -15vmax;
+}
+
+.ambient-blob {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   filter: blur(80px);
   opacity: 0.16;
@@ -34,41 +52,41 @@
 }
 
 .ambient-blob--a {
-  top: -20vmax;
-  left: -10vmax;
   background: radial-gradient(circle, #9d7cf2 0%, transparent 70%);
-  animation: ambientDriftA 40s ease-in-out infinite;
+  animation: ambientDriftA 22s ease-in-out infinite;
 }
 
 .ambient-blob--b {
-  bottom: -25vmax;
-  right: -15vmax;
-  background: radial-gradient(circle, #4fa8a0 0%, transparent 70%);
-  animation: ambientDriftB 48s ease-in-out infinite;
+  background: radial-gradient(circle, #8163de 0%, transparent 70%);
+  animation: ambientDriftB 26s ease-in-out infinite;
 }
 
 .ambient-bg--static .ambient-blob {
   animation: none;
 }
 
+.ambient-bg--static .ambient-blob-shift {
+  transition: none;
+}
+
 @keyframes ambientDriftA {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(8vmax, 6vmax) scale(1.1); }
+  50% { transform: translate(10vmax, 8vmax) scale(1.12); }
 }
 
 @keyframes ambientDriftB {
   0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-6vmax, -8vmax) scale(1.08); }
+  50% { transform: translate(-9vmax, -10vmax) scale(1.1); }
 }
 
 .ambient-pointer-glow {
   position: absolute;
   top: 0;
   left: 0;
-  width: 40vmax;
-  height: 40vmax;
+  width: 26vmax;
+  height: 26vmax;
   transform: translate(calc(var(--gx, 50vw) - 50%), calc(var(--gy, 50vh) - 50%));
-  background: radial-gradient(circle, rgba(157, 124, 242, 0.14) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(157, 124, 242, 0.055) 0%, transparent 55%);
   opacity: 0;
   transition: opacity 0.6s ease-out;
 }
@@ -80,18 +98,20 @@
   margin-left: -6px;
   margin-top: -6px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(157, 124, 242, 0.35) 0%, transparent 70%);
-  animation: ambientRipple 900ms ease-out forwards;
+  background: radial-gradient(circle, rgba(157, 124, 242, 0.18) 0%, transparent 60%);
+  animation: ambientRipple 700ms ease-out forwards;
 }
 
 @keyframes ambientRipple {
-  from { transform: scale(1); opacity: 0.6; }
-  to { transform: scale(24); opacity: 0; }
+  from { transform: scale(1); opacity: 0.5; }
+  to { transform: scale(14); opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ambient-blob {
+  .ambient-blob,
+  .ambient-blob-shift {
     animation: none !important;
+    transition: none !important;
   }
   .ambient-ripple {
     animation: none !important;

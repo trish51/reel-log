@@ -676,8 +676,8 @@ export default function ReelLog() {
     <div className="min-h-screen relative" style={{ background: BG }}>
       <AmbientBackground />
       <div
-        className="relative px-4 py-3 sm:px-6 sm:py-6 border-b"
-        style={{ borderColor: PANEL_ALT, background: "linear-gradient(180deg, #1A1E25 0%, #14171C 100%)" }}
+        className="relative px-4 pt-3 pb-6 sm:px-6 sm:pt-6 sm:pb-10"
+        style={{ background: "linear-gradient(180deg, #1A1E25 0%, rgba(26,30,37,0) 100%)" }}
       >
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -920,10 +920,10 @@ export default function ReelLog() {
         <button
           type="button"
           onClick={() => suggestionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-          className={`fixed bottom-5 right-5 z-40 flex items-center gap-1.5 px-4 py-2.5 rounded-full font-semibold text-sm shadow-lg transition-all duration-300 active:scale-95 ${
+          className={`fixed bottom-5 right-5 z-40 flex items-center gap-1.5 px-4 py-2.5 rounded-md font-semibold text-sm transition-all duration-300 active:scale-95 hover:opacity-90 ${
             showSuggestionsFab ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none"
           }`}
-          style={{ background: ACCENT, color: BG, boxShadow: "0 8px 24px -8px rgba(157,124,242,0.6)" }}
+          style={{ background: ACCENT, color: BG, boxShadow: "0 4px 12px -4px rgba(157,124,242,0.35)" }}
         >
           <Sparkles className="w-4 h-4" /> Suggestions <ChevronDown className="w-4 h-4" />
         </button>
