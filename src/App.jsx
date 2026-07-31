@@ -10,13 +10,18 @@ import {
   Loader2,
   ChevronDown,
   Tag,
-  Settings,
+  KeyRound,
   RefreshCw,
+  SlidersHorizontal,
+  List,
+  LayoutGrid,
+  Sparkles,
 } from "lucide-react";
 import { fetchTmdbInfo } from "./lib/tmdb";
 import SettingsPanel from "./components/SettingsPanel";
 import RecommendationsPanel from "./components/RecommendationsPanel";
 import { Poster } from "./components/Poster";
+import { AmbientBackground } from "./components/AmbientBackground";
 import { STATUS, CONTENT_TYPE, RATINGS } from "./constants";
 import { ACCENT, BG, PANEL, PANEL_ALT, BORDER, TEXT, TEXT_MUTED, TEXT_DIM, TEXT_BODY, DANGER } from "./theme";
 
@@ -78,30 +83,27 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching,
       />
 
       <Content className="flex-1 p-5 min-w-0" {...contentAnimProps}>
-        <div className="flex items-start justify-between gap-2">
-          <h3
-            className="text-xl font-bold leading-tight truncate min-w-0"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.5px", color: TEXT }}
-            title={show.title}
+        <h3
+          className="text-xl font-bold leading-tight break-words"
+          style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.5px", color: TEXT }}
+        >
+          {show.title}
+        </h3>
+        <div className="flex items-center gap-1 flex-wrap mt-1.5">
+          <span
+            className="inline-flex items-center gap-1 text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full"
+            style={{ color: TEXT_MUTED, border: `1px solid ${BORDER}` }}
           >
-            {show.title}
-          </h3>
-          <div className="flex items-center gap-1 shrink-0">
-            <span
-              className="inline-flex items-center gap-1 text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full"
-              style={{ color: TEXT_MUTED, border: `1px solid ${BORDER}` }}
-            >
-              {React.createElement(CONTENT_TYPE[show.contentType || "tv"].Icon, { className: "w-3 h-3" })}
-              {CONTENT_TYPE[show.contentType || "tv"].short}
-            </span>
-            <span
-              className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
-              style={{ color: status.color, border: `1px solid ${status.color}` }}
-              title={status.label}
-            >
-              {status.short}
-            </span>
-          </div>
+            {React.createElement(CONTENT_TYPE[show.contentType || "tv"].Icon, { className: "w-3 h-3" })}
+            {CONTENT_TYPE[show.contentType || "tv"].short}
+          </span>
+          <span
+            className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
+            style={{ color: status.color, border: `1px solid ${status.color}` }}
+            title={status.label}
+          >
+            {status.short}
+          </span>
         </div>
 
         {show.genres?.length > 0 ? (
@@ -188,7 +190,7 @@ function CompactShowCard({ show, onExpand }) {
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter") onExpand(); }}
-      className="rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_10px_24px_-8px_rgba(157,124,242,0.4)] h-[220px] aspect-[2/3]"
+      className="rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_10px_24px_-8px_rgba(157,124,242,0.4)] w-full aspect-[2/3]"
       style={{ background: PANEL, border: `1px solid ${status.color}33` }}
       title={show.title}
     >
@@ -435,6 +437,95 @@ function ShowForm({ initial, onSave, onClose }) {
 }
 
 
+function FilterModal({ filterStatus, setFilterStatus, filterType, setFilterType, onClose }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn"
+      style={{ background: "#0A0C0FBB" }}
+      onClick={onClose}
+    >
+      <div
+        className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl flex flex-col animate-modalIn"
+        style={{ background: PANEL, border: `1px solid ${BORDER}`, maxHeight: "85vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
+          <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "22px", color: TEXT, letterSpacing: "0.5px" }}>
+            Filters
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 hover:opacity-70 active:scale-90 transition-all duration-150"
+          >
+            <X className="w-5 h-5" style={{ color: TEXT_MUTED }} />
+          </button>
+        </div>
+
+        <div className="px-5 pb-5 space-y-5 overflow-y-auto">
+          <div>
+            <label className="text-xs uppercase tracking-wide font-semibold" style={{ color: TEXT_MUTED }}>
+              Status
+            </label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {["all", "want", "watching", "watched"].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setFilterStatus(s)}
+                  className={`py-2.5 rounded-md text-xs font-semibold uppercase transition-all duration-150 active:scale-[0.97] ${filterStatus === s ? "hover:opacity-90" : "hover:bg-white/5"}`}
+                  style={{
+                    background: filterStatus === s ? TEXT : "transparent",
+                    color: filterStatus === s ? BG : TEXT_MUTED,
+                    border: `1px solid ${filterStatus === s ? TEXT : BORDER}`,
+                  }}
+                >
+                  {s === "all" ? "All" : STATUS[s].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs uppercase tracking-wide font-semibold" style={{ color: TEXT_MUTED }}>
+              Type
+            </label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {["all", ...Object.keys(CONTENT_TYPE)].map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setFilterType(t)}
+                  className={`flex items-center justify-center gap-1.5 py-2.5 rounded-md text-xs font-semibold transition-all duration-150 active:scale-[0.97] ${filterType === t ? "hover:opacity-90" : "hover:bg-white/5"}`}
+                  style={{
+                    background: filterType === t ? ACCENT : "transparent",
+                    color: filterType === t ? BG : TEXT_MUTED,
+                    border: `1px solid ${filterType === t ? ACCENT : BORDER}`,
+                  }}
+                >
+                  {t !== "all" && React.createElement(CONTENT_TYPE[t].Icon, { className: "w-3.5 h-3.5" })}
+                  {t === "all" ? "All Types" : CONTENT_TYPE[t].label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="px-5 pt-1 pb-6 sm:pb-5 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-3 sm:py-2.5 rounded-md font-semibold hover:opacity-90 active:scale-[0.97] transition-all duration-150"
+            style={{ background: ACCENT, color: BG }}
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ReelLog() {
   const { shows, persist, error } = useShows();
   const showsRef = useRef(shows);
@@ -442,11 +533,14 @@ export default function ReelLog() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState("log");
   const [pendingIds, setPendingIds] = useState(() => new Set());
+  const suggestionsRef = useRef(null);
+  const [showSuggestionsFab, setShowSuggestionsFab] = useState(false);
   const [viewMode, setViewMode] = useState(() => {
     try {
       return localStorage.getItem("reel-log:view-mode") || "default";
@@ -544,6 +638,8 @@ export default function ReelLog() {
     });
   }, [shows, filterStatus, filterType, search]);
 
+  const activeFilterCount = (filterStatus !== "all" ? 1 : 0) + (filterType !== "all" ? 1 : 0);
+
   const stats = useMemo(() => {
     if (!shows) return null;
     const genreCounts = {};
@@ -561,36 +657,57 @@ export default function ReelLog() {
     };
   }, [shows]);
 
+  useEffect(() => {
+    if (tab !== "insights") {
+      setShowSuggestionsFab(false);
+      return;
+    }
+    const node = suggestionsRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowSuggestionsFab(!entry.isIntersecting),
+      { threshold: 0.15 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [tab, stats]);
+
   return (
-    <div className="min-h-screen" style={{ background: BG }}>
+    <div className="min-h-screen relative" style={{ background: BG }}>
+      <AmbientBackground />
       <div
-        className="px-6 py-8 border-b"
+        className="relative px-4 py-3 sm:px-6 sm:py-6 border-b"
         style={{ borderColor: PANEL_ALT, background: "linear-gradient(180deg, #1A1E25 0%, #14171C 100%)" }}
       >
-        <div className="max-w-6xl mx-auto flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg" style={{ background: `${ACCENT}22`, border: `1px solid ${ACCENT}` }}>
-              <Film className="w-6 h-6" style={{ color: ACCENT }} />
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="p-1.5 sm:p-2 rounded-lg shrink-0" style={{ background: `${ACCENT}22`, border: `1px solid ${ACCENT}` }}>
+              <Film className="w-4 h-4 sm:w-6 sm:h-6" style={{ color: ACCENT }} />
             </div>
-            <div>
-              <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "36px", color: TEXT, letterSpacing: "1px", lineHeight: 1 }}>
+            <div className="min-w-0">
+              <h1
+                className="truncate text-[20px] sm:text-[36px]"
+                style={{ fontFamily: "'Bebas Neue', sans-serif", color: TEXT, letterSpacing: "1px", lineHeight: 1 }}
+              >
                 REEL LOG
               </h1>
-              <p style={{ color: TEXT_MUTED, fontSize: "13px" }}>Your running record of everything watched.</p>
+              <p className="truncate text-[10px] sm:text-[13px] opacity-70 sm:opacity-100" style={{ color: TEXT_MUTED }}>
+                Your running record of everything watched.
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={() => setShowSettings(true)}
-              className="p-2.5 rounded-md hover:bg-white/5 active:scale-90 transition-all duration-150"
+              className="p-2 sm:p-2.5 rounded-md hover:bg-white/5 active:scale-90 transition-all duration-150"
               style={{ border: `1px solid ${BORDER}`, color: TEXT_MUTED }}
-              title="Settings"
+              title="API key settings"
             >
-              <Settings className="w-4 h-4" />
+              <KeyRound className="w-4 h-4" />
             </button>
             <button
               onClick={() => { setEditing(null); setShowForm(true); }}
-              className="flex items-center gap-2 px-4 py-2 rounded-md font-semibold hover:opacity-90 active:scale-[0.97] transition-all duration-150"
+              className="flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2 rounded-md font-semibold hover:opacity-90 active:scale-[0.97] transition-all duration-150"
               style={{ background: ACCENT, color: BG }}
             >
               <Plus className="w-4 h-4" /> Add Title
@@ -599,7 +716,7 @@ export default function ReelLog() {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-6">
+      <div className="relative max-w-6xl mx-auto px-4 py-5 sm:px-6 sm:py-6">
         {error && (
           <div className="mb-4 px-4 py-2 rounded-md text-sm" style={{ background: `${DANGER}22`, color: DANGER, border: `1px solid ${DANGER}` }}>
             {error}
@@ -627,63 +744,66 @@ export default function ReelLog() {
 
         {shows !== null && tab === "log" && (
           <div className="animate-tabIn">
-            <div className="flex flex-wrap gap-2 mb-5 items-center">
-              <div className="relative flex-1 min-w-[180px]">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: TEXT_MUTED }} />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search title or genre..."
-                  className="w-full pl-9 pr-3 py-2 rounded-md outline-none text-sm"
-                  style={{ background: PANEL, color: TEXT, border: `1px solid ${BORDER}` }}
-                />
-              </div>
-              {["all", "want", "watching", "watched"].map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setFilterStatus(s)}
-                  className={`px-3 py-2 rounded-md text-xs font-semibold uppercase transition-all duration-150 active:scale-[0.97] ${filterStatus === s ? "hover:opacity-90" : "hover:bg-white/5"}`}
-                  style={{
-                    background: filterStatus === s ? TEXT : "transparent",
-                    color: filterStatus === s ? BG : TEXT_MUTED,
-                    border: `1px solid ${filterStatus === s ? TEXT : BORDER}`,
-                  }}
-                >
-                  {s === "all" ? "All" : STATUS[s].label}
-                </button>
-              ))}
+            <div className="relative mb-3">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: TEXT_MUTED }} />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search title or genre..."
+                className="w-full pl-9 pr-3 py-2 rounded-md outline-none text-sm"
+                style={{ background: PANEL, color: TEXT, border: `1px solid ${BORDER}` }}
+              />
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-5">
-              {["all", ...Object.keys(CONTENT_TYPE)].map((t) => (
+            <div className="flex items-center justify-between gap-2 mb-5">
+              <button
+                type="button"
+                onClick={() => setShowFilterModal(true)}
+                className="relative flex items-center gap-1.5 px-3 py-2 rounded-md text-xs font-semibold uppercase transition-all duration-150 active:scale-[0.97] hover:bg-white/5"
+                style={{
+                  border: `1px solid ${activeFilterCount > 0 ? ACCENT : BORDER}`,
+                  color: activeFilterCount > 0 ? ACCENT : TEXT_MUTED,
+                }}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center"
+                    style={{ background: ACCENT, color: BG }}
+                  >
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
+
+              <div className="flex items-center gap-1 rounded-md p-0.5" style={{ border: `1px solid ${BORDER}` }}>
                 <button
-                  key={t}
-                  onClick={() => setFilterType(t)}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 active:scale-[0.97] ${filterType === t ? "hover:opacity-90" : "hover:bg-white/5"}`}
+                  type="button"
+                  onClick={() => setViewMode("default")}
+                  title="Default view"
+                  aria-label="Default view"
+                  className={`p-1.5 rounded transition-all duration-150 active:scale-[0.97] ${viewMode === "default" ? "hover:opacity-90" : "hover:bg-white/5"}`}
                   style={{
-                    background: filterType === t ? ACCENT : "transparent",
-                    color: filterType === t ? BG : TEXT_MUTED,
-                    border: `1px solid ${filterType === t ? ACCENT : BORDER}`,
+                    background: viewMode === "default" ? ACCENT : "transparent",
+                    color: viewMode === "default" ? BG : TEXT_MUTED,
                   }}
                 >
-                  {t !== "all" && React.createElement(CONTENT_TYPE[t].Icon, { className: "w-3 h-3" })}
-                  {t === "all" ? "All Types" : CONTENT_TYPE[t].label}
+                  <List className="w-4 h-4" />
                 </button>
-              ))}
-              <div className="flex items-center gap-1 ml-auto rounded-md p-0.5" style={{ border: `1px solid ${BORDER}` }}>
-                {["default", "compact"].map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setViewMode(m)}
-                    className={`px-3 py-1.5 rounded text-xs font-semibold uppercase tracking-wide transition-all duration-150 active:scale-[0.97] ${viewMode === m ? "hover:opacity-90" : "hover:bg-white/5"}`}
-                    style={{
-                      background: viewMode === m ? ACCENT : "transparent",
-                      color: viewMode === m ? BG : TEXT_MUTED,
-                    }}
-                  >
-                    {m === "default" ? "Default" : "Compact"}
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  onClick={() => setViewMode("compact")}
+                  title="Compact view"
+                  aria-label="Compact view"
+                  className={`p-1.5 rounded transition-all duration-150 active:scale-[0.97] ${viewMode === "compact" ? "hover:opacity-90" : "hover:bg-white/5"}`}
+                  style={{
+                    background: viewMode === "compact" ? ACCENT : "transparent",
+                    color: viewMode === "compact" ? BG : TEXT_MUTED,
+                  }}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
@@ -695,11 +815,11 @@ export default function ReelLog() {
                 </p>
               </div>
             ) : viewMode === "compact" ? (
-              <div className="grid grid-cols-[repeat(auto-fill,147px)] grid-flow-dense gap-3">
+              <div className="grid grid-cols-2 min-[428px]:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 grid-flow-dense gap-3">
                 {filtered.map((show) => {
                   const isExpanded = expandedId === show.id;
                   return (
-                    <motion.div key={show.id} layout className={isExpanded ? "col-span-3" : ""}>
+                    <motion.div key={show.id} layout className={isExpanded ? "col-span-full" : ""}>
                       {isExpanded ? (
                         <ShowCard
                           show={show}
@@ -719,7 +839,7 @@ export default function ReelLog() {
                 })}
               </div>
             ) : (
-              <div className="grid sm:grid-cols-2 2xl:grid-cols-3 gap-4">
+              <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {filtered.map((show) => (
                   <ShowCard
                     key={show.id}
@@ -789,10 +909,25 @@ export default function ReelLog() {
               </div>
             </div>
 
-            <RecommendationsPanel shows={shows} onAddToLog={addRecommendationToLog} />
+            <div ref={suggestionsRef}>
+              <RecommendationsPanel shows={shows} onAddToLog={addRecommendationToLog} />
+            </div>
           </div>
         )}
       </div>
+
+      {tab === "insights" && (
+        <button
+          type="button"
+          onClick={() => suggestionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          className={`fixed bottom-5 right-5 z-40 flex items-center gap-1.5 px-4 py-2.5 rounded-full font-semibold text-sm shadow-lg transition-all duration-300 active:scale-95 ${
+            showSuggestionsFab ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none"
+          }`}
+          style={{ background: ACCENT, color: BG, boxShadow: "0 8px 24px -8px rgba(157,124,242,0.6)" }}
+        >
+          <Sparkles className="w-4 h-4" /> Suggestions <ChevronDown className="w-4 h-4" />
+        </button>
+      )}
 
       {showForm && (
         <ShowForm
@@ -803,6 +938,16 @@ export default function ReelLog() {
       )}
 
       {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
+
+      {showFilterModal && (
+        <FilterModal
+          filterStatus={filterStatus}
+          setFilterStatus={setFilterStatus}
+          filterType={filterType}
+          setFilterType={setFilterType}
+          onClose={() => setShowFilterModal(false)}
+        />
+      )}
     </div>
   );
 }

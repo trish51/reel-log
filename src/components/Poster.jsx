@@ -32,7 +32,7 @@ export function Poster({ posterUrl, contentType, rating, showRating, loading, va
     <motion.div
       layout
       layoutId={layoutId}
-      className={`relative overflow-hidden ${isFull ? "w-full h-full" : "w-32 sm:w-36 shrink-0 aspect-[2/3]"}`}
+      className={`relative overflow-hidden ${isFull ? "w-full h-full" : "w-24 sm:w-36 shrink-0 aspect-[2/3]"}`}
       style={{ background: BG, borderRight: isFull ? "none" : `1px solid ${BORDER}` }}
     >
       {posterUrl ? (

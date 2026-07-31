@@ -13,3 +13,88 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+.ambient-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+
+.ambient-blob {
+  position: absolute;
+  width: 60vmax;
+  height: 60vmax;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.16;
+  will-change: transform;
+}
+
+.ambient-blob--a {
+  top: -20vmax;
+  left: -10vmax;
+  background: radial-gradient(circle, #9d7cf2 0%, transparent 70%);
+  animation: ambientDriftA 40s ease-in-out infinite;
+}
+
+.ambient-blob--b {
+  bottom: -25vmax;
+  right: -15vmax;
+  background: radial-gradient(circle, #4fa8a0 0%, transparent 70%);
+  animation: ambientDriftB 48s ease-in-out infinite;
+}
+
+.ambient-bg--static .ambient-blob {
+  animation: none;
+}
+
+@keyframes ambientDriftA {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(8vmax, 6vmax) scale(1.1); }
+}
+
+@keyframes ambientDriftB {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-6vmax, -8vmax) scale(1.08); }
+}
+
+.ambient-pointer-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40vmax;
+  height: 40vmax;
+  transform: translate(calc(var(--gx, 50vw) - 50%), calc(var(--gy, 50vh) - 50%));
+  background: radial-gradient(circle, rgba(157, 124, 242, 0.14) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.6s ease-out;
+}
+
+.ambient-ripple {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  margin-left: -6px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(157, 124, 242, 0.35) 0%, transparent 70%);
+  animation: ambientRipple 900ms ease-out forwards;
+}
+
+@keyframes ambientRipple {
+  from { transform: scale(1); opacity: 0.6; }
+  to { transform: scale(24); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-blob {
+    animation: none !important;
+  }
+  .ambient-ripple {
+    animation: none !important;
+    display: none;
+  }
+}
