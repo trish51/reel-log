@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import {
   Film,
@@ -17,6 +18,7 @@ import {
   List,
   LayoutGrid,
   Sparkles,
+  BookOpen,
 } from "lucide-react";
 import { fetchTmdbInfo } from "./lib/tmdb";
 import SettingsPanel from "./components/SettingsPanel";
@@ -55,8 +57,56 @@ function useShows() {
   return { shows, persist, error };
 }
 
+function DetailsModal({ show, onClose }) {
+  const text = show.notes || show.synopsis || "No description available.";
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadeIn"
+      style={{ background: "#0A0C0FBB" }}
+      onClick={(e) => { e.stopPropagation(); onClose(); }}
+    >
+      <div
+        className="w-full max-w-md rounded-xl flex flex-col animate-modalIn"
+        style={{ background: PANEL, border: `1px solid ${BORDER}`, maxHeight: "85vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-3 px-6 pt-6 pb-4 shrink-0">
+          <Poster
+            posterUrl={show.posterUrl}
+            contentType={show.contentType}
+            variant="modalSmall"
+          />
+          <div className="flex-1 min-w-0">
+            <h2
+              className="break-words"
+              style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "22px", color: TEXT, letterSpacing: "0.5px" }}
+            >
+              {show.title}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            className="p-1 hover:opacity-70 active:scale-90 transition-all duration-150 shrink-0"
+          >
+            <X className="w-5 h-5" style={{ color: TEXT_MUTED }} />
+          </button>
+        </div>
+
+        <div className="px-6 pb-6 overflow-y-auto">
+          <p className="text-sm whitespace-pre-wrap" style={{ color: TEXT_BODY }}>
+            {text}
+          </p>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching, onCollapse, posterLayoutId, lockedHeight }) {
   const status = STATUS[show.status];
+  const [showDetails, setShowDetails] = useState(false);
 
   const runFetch = (e) => {
     e.stopPropagation();
@@ -74,7 +124,7 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching,
   return (
     <div
       onClick={onCollapse}
-      className={`relative rounded-xl overflow-hidden flex transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_rgba(157,124,242,0.3)] ${onCollapse ? "cursor-pointer" : ""} ${lockedHeight ? "" : "items-start"}`}
+      className={`relative rounded-xl overflow-hidden flex transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_rgba(157,124,242,0.3)] ${onCollapse ? "cursor-pointer" : ""} ${lockedHeight ? "" : "items-start sm:items-stretch"}`}
       style={rootStyle}
     >
       <Poster
@@ -88,7 +138,7 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching,
       />
 
       <Content
-        className={`flex-1 min-w-0 ${lockedHeight ? "p-4 overflow-y-auto" : "p-5"}`}
+        className={`flex-1 min-w-0 ${lockedHeight ? "p-4 overflow-y-auto" : "p-4 sm:p-5"}`}
         {...contentAnimProps}
       >
         <h3
@@ -177,6 +227,9 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching,
                 <RotateCcw className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
               </button>
             )}
+            <button onClick={(e) => { e.stopPropagation(); setShowDetails(true); }} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="View details">
+              <BookOpen className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
+            </button>
             <button onClick={(e) => { e.stopPropagation(); onEdit(show); }} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="Edit">
               <Tag className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
             </button>
@@ -186,6 +239,10 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching,
           </div>
         </div>
       </Content>
+
+      {showDetails && (
+        <DetailsModal show={show} onClose={() => setShowDetails(false)} />
+      )}
     </div>
   );
 }
@@ -216,7 +273,7 @@ function CompactShowCard({ show, onExpand }) {
 
 const MODAL_CLOSE_MS = 180;
 
-function ShowForm({ initial, onSave, onClose }) {
+function ShowForm({ initial, existingShows, onSave, onClose }) {
   const [title, setTitle] = useState(initial?.title || "");
   const [contentType, setContentType] = useState(initial?.contentType || "tv");
   const [status, setStatus] = useState(initial?.status || "want");
@@ -226,6 +283,7 @@ function ShowForm({ initial, onSave, onClose }) {
   const [notes, setNotes] = useState(initial?.notes || "");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [duplicateError, setDuplicateError] = useState(false);
 
   const requestClose = () => {
     setClosing(true);
@@ -244,6 +302,15 @@ function ShowForm({ initial, onSave, onClose }) {
 
   const submit = () => {
     if (!title.trim()) return;
+
+    const normalizedTitle = title.trim().toLowerCase();
+    const isDuplicate = (existingShows || []).some(
+      (s) => s.id !== initial?.id && s.contentType === contentType && s.title.trim().toLowerCase() === normalizedTitle
+    );
+    if (isDuplicate) {
+      setDuplicateError(true);
+      return;
+    }
 
     const titleOrTypeChanged = !initial || initial.title.trim().toLowerCase() !== title.trim().toLowerCase() || initial.contentType !== contentType;
     const finalGenres = genresTouched ? genres : titleOrTypeChanged ? [] : genres;
@@ -293,11 +360,11 @@ function ShowForm({ initial, onSave, onClose }) {
             <input
               autoFocus
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => { setTitle(e.target.value); setDuplicateError(false); }}
               onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
               placeholder="e.g. Severance"
               className="w-full mt-1 px-3 py-2 rounded-md outline-none"
-              style={{ background: BG, color: TEXT, border: `1px solid ${BORDER}` }}
+              style={{ background: BG, color: TEXT, border: `1px solid ${duplicateError ? DANGER : BORDER}` }}
             />
             <div className="flex gap-2 mt-2">
               {Object.entries(CONTENT_TYPE).map(([key, t]) => {
@@ -306,7 +373,7 @@ function ShowForm({ initial, onSave, onClose }) {
                   <button
                     type="button"
                     key={key}
-                    onClick={() => setContentType(key)}
+                    onClick={() => { setContentType(key); setDuplicateError(false); }}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 active:scale-[0.97] ${contentType === key ? "hover:opacity-90" : "hover:bg-white/5"}`}
                     style={{
                       border: `1px solid ${contentType === key ? TEXT : BORDER}`,
@@ -320,9 +387,15 @@ function ShowForm({ initial, onSave, onClose }) {
                 );
               })}
             </div>
-            <p className="text-xs mt-1" style={{ color: TEXT_DIM }}>
-              Helps tell apart titles shared by a movie and a show.
-            </p>
+            {duplicateError ? (
+              <p className="text-xs mt-1" style={{ color: DANGER }}>
+                You've already logged this {CONTENT_TYPE[contentType].label.toLowerCase()} — edit the existing entry instead.
+              </p>
+            ) : (
+              <p className="text-xs mt-1" style={{ color: TEXT_DIM }}>
+                Helps tell apart titles shared by a movie and a show.
+              </p>
+            )}
             {genres.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {genres.map((g) => (
@@ -589,15 +662,10 @@ export default function ReelLog() {
     setExpandedId(show.id);
   };
 
-  useEffect(() => {
-    if (!expandedId) return;
-    const el = compactCardRefs.current.get(expandedId);
-    if (!el) return;
-    const t = setTimeout(() => {
-      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }, 60);
-    return () => clearTimeout(t);
-  }, [expandedId]);
+  const scrollExpandedIntoView = (show) => {
+    if (expandedId !== show.id) return;
+    compactCardRefs.current.get(show.id)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  };
 
   const fetchDetailsForShow = useCallback(async (id, contentType, titleOverride) => {
     setPendingIds((prev) => new Set(prev).add(id));
@@ -869,7 +937,8 @@ export default function ReelLog() {
                         if (el) compactCardRefs.current.set(show.id, el);
                         else compactCardRefs.current.delete(show.id);
                       }}
-                      className={isExpanded ? "col-span-full" : ""}
+                      onLayoutAnimationComplete={() => scrollExpandedIntoView(show)}
+                      className={isExpanded ? "col-span-full md:col-span-3" : ""}
                     >
                       {isExpanded ? (
                         <ShowCard
@@ -891,7 +960,7 @@ export default function ReelLog() {
                 })}
               </div>
             ) : (
-              <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid sm:grid-cols-2 gap-4">
                 {filtered.map((show) => (
                   <ShowCard
                     key={show.id}
@@ -984,6 +1053,7 @@ export default function ReelLog() {
       {showForm && (
         <ShowForm
           initial={editing}
+          existingShows={shows || []}
           onSave={saveShow}
           onClose={() => { setShowForm(false); setEditing(null); }}
         />
