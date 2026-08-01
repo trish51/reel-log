@@ -273,7 +273,7 @@ function CompactShowCard({ show, onExpand }) {
 
 const MODAL_CLOSE_MS = 180;
 
-function ShowForm({ initial, onSave, onClose }) {
+function ShowForm({ initial, existingShows, onSave, onClose }) {
   const [title, setTitle] = useState(initial?.title || "");
   const [contentType, setContentType] = useState(initial?.contentType || "tv");
   const [status, setStatus] = useState(initial?.status || "want");
@@ -283,6 +283,7 @@ function ShowForm({ initial, onSave, onClose }) {
   const [notes, setNotes] = useState(initial?.notes || "");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [duplicateError, setDuplicateError] = useState(false);
 
   const requestClose = () => {
     setClosing(true);
@@ -301,6 +302,15 @@ function ShowForm({ initial, onSave, onClose }) {
 
   const submit = () => {
     if (!title.trim()) return;
+
+    const normalizedTitle = title.trim().toLowerCase();
+    const isDuplicate = (existingShows || []).some(
+      (s) => s.id !== initial?.id && s.contentType === contentType && s.title.trim().toLowerCase() === normalizedTitle
+    );
+    if (isDuplicate) {
+      setDuplicateError(true);
+      return;
+    }
 
     const titleOrTypeChanged = !initial || initial.title.trim().toLowerCase() !== title.trim().toLowerCase() || initial.contentType !== contentType;
     const finalGenres = genresTouched ? genres : titleOrTypeChanged ? [] : genres;
@@ -350,11 +360,11 @@ function ShowForm({ initial, onSave, onClose }) {
             <input
               autoFocus
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => { setTitle(e.target.value); setDuplicateError(false); }}
               onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
               placeholder="e.g. Severance"
               className="w-full mt-1 px-3 py-2 rounded-md outline-none"
-              style={{ background: BG, color: TEXT, border: `1px solid ${BORDER}` }}
+              style={{ background: BG, color: TEXT, border: `1px solid ${duplicateError ? DANGER : BORDER}` }}
             />
             <div className="flex gap-2 mt-2">
               {Object.entries(CONTENT_TYPE).map(([key, t]) => {
@@ -363,7 +373,7 @@ function ShowForm({ initial, onSave, onClose }) {
                   <button
                     type="button"
                     key={key}
-                    onClick={() => setContentType(key)}
+                    onClick={() => { setContentType(key); setDuplicateError(false); }}
                     className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 active:scale-[0.97] ${contentType === key ? "hover:opacity-90" : "hover:bg-white/5"}`}
                     style={{
                       border: `1px solid ${contentType === key ? TEXT : BORDER}`,
@@ -377,9 +387,15 @@ function ShowForm({ initial, onSave, onClose }) {
                 );
               })}
             </div>
-            <p className="text-xs mt-1" style={{ color: TEXT_DIM }}>
-              Helps tell apart titles shared by a movie and a show.
-            </p>
+            {duplicateError ? (
+              <p className="text-xs mt-1" style={{ color: DANGER }}>
+                You've already logged this {CONTENT_TYPE[contentType].label.toLowerCase()} — edit the existing entry instead.
+              </p>
+            ) : (
+              <p className="text-xs mt-1" style={{ color: TEXT_DIM }}>
+                Helps tell apart titles shared by a movie and a show.
+              </p>
+            )}
             {genres.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-2">
                 {genres.map((g) => (
@@ -642,8 +658,7 @@ export default function ReelLog() {
 
   const expandCompactCard = (show) => {
     const el = compactCardRefs.current.get(show.id);
-    const isMobile = window.matchMedia("(max-width: 767px)").matches;
-    setExpandedHeight(isMobile && el ? el.getBoundingClientRect().height : null);
+    setExpandedHeight(el ? el.getBoundingClientRect().height : null);
     setExpandedId(show.id);
   };
 
@@ -945,7 +960,7 @@ export default function ReelLog() {
                 })}
               </div>
             ) : (
-              <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              <div className="grid sm:grid-cols-2 gap-4">
                 {filtered.map((show) => (
                   <ShowCard
                     key={show.id}
@@ -1038,6 +1053,7 @@ export default function ReelLog() {
       {showForm && (
         <ShowForm
           initial={editing}
+          existingShows={shows || []}
           onSave={saveShow}
           onClose={() => { setShowForm(false); setEditing(null); }}
         />
