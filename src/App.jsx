@@ -9,6 +9,7 @@ import {
   Trash2,
   Loader2,
   ChevronDown,
+  ArrowDown,
   Tag,
   KeyRound,
   RefreshCw,
@@ -54,7 +55,7 @@ function useShows() {
   return { shows, persist, error };
 }
 
-function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching, onCollapse, posterLayoutId }) {
+function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching, onCollapse, posterLayoutId, lockedHeight }) {
   const status = STATUS[show.status];
 
   const runFetch = (e) => {
@@ -67,11 +68,14 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching,
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.2, delay: 0.15 } }
     : {};
 
+  const rootStyle = { background: PANEL, border: `1px solid ${status.color}33` };
+  if (lockedHeight) rootStyle.height = `${lockedHeight}px`;
+
   return (
     <div
       onClick={onCollapse}
-      className={`relative rounded-xl overflow-hidden flex transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_rgba(157,124,242,0.3)] ${onCollapse ? "cursor-pointer" : ""}`}
-      style={{ background: PANEL, border: `1px solid ${status.color}33` }}
+      className={`relative rounded-xl overflow-hidden flex transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_rgba(157,124,242,0.3)] ${onCollapse ? "cursor-pointer" : ""} ${lockedHeight ? "" : "items-start"}`}
+      style={rootStyle}
     >
       <Poster
         posterUrl={show.posterUrl}
@@ -80,9 +84,13 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching,
         showRating={show.status === "watched"}
         loading={fetching}
         layoutId={posterLayoutId}
+        variant={lockedHeight ? "lockedHeight" : "thumbnail"}
       />
 
-      <Content className="flex-1 p-5 min-w-0" {...contentAnimProps}>
+      <Content
+        className={`flex-1 min-w-0 ${lockedHeight ? "p-4 overflow-y-auto" : "p-5"}`}
+        {...contentAnimProps}
+      >
         <h3
           className="text-xl font-bold leading-tight break-words"
           style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.5px", color: TEXT }}
@@ -303,7 +311,7 @@ function ShowForm({ initial, onSave, onClose }) {
                     style={{
                       border: `1px solid ${contentType === key ? TEXT : BORDER}`,
                       color: contentType === key ? BG : TEXT_MUTED,
-                      background: contentType === key ? TEXT : "transparent",
+                      background: contentType === key ? TEXT : undefined,
                     }}
                   >
                     <Icon className="w-3.5 h-3.5" />
@@ -340,7 +348,7 @@ function ShowForm({ initial, onSave, onClose }) {
                   style={{
                     border: `1px solid ${s.color}`,
                     color: status === key ? BG : s.color,
-                    background: status === key ? s.color : "transparent",
+                    background: status === key ? s.color : undefined,
                   }}
                 >
                   {s.label}
@@ -362,7 +370,7 @@ function ShowForm({ initial, onSave, onClose }) {
                     className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-md transition-all duration-150 active:scale-[0.97] ${rating === key ? "hover:opacity-80" : "hover:bg-white/5"}`}
                     style={{
                       border: `1px solid ${r.color}`,
-                      background: rating === key ? `${r.color}22` : "transparent",
+                      background: rating === key ? `${r.color}22` : undefined,
                     }}
                   >
                     <Icon className="w-4 h-4" style={{ color: r.color }} />
@@ -438,14 +446,19 @@ function ShowForm({ initial, onSave, onClose }) {
 
 
 function FilterModal({ filterStatus, setFilterStatus, filterType, setFilterType, onClose }) {
+  const resetFilters = () => {
+    setFilterStatus("all");
+    setFilterType("all");
+  };
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadeIn"
       style={{ background: "#0A0C0FBB" }}
       onClick={onClose}
     >
       <div
-        className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-xl flex flex-col animate-modalIn"
+        className="w-full max-w-sm rounded-xl flex flex-col animate-modalIn"
         style={{ background: PANEL, border: `1px solid ${BORDER}`, maxHeight: "85vh" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -475,7 +488,7 @@ function FilterModal({ filterStatus, setFilterStatus, filterType, setFilterType,
                   onClick={() => setFilterStatus(s)}
                   className={`py-2.5 rounded-md text-xs font-semibold uppercase transition-all duration-150 active:scale-[0.97] ${filterStatus === s ? "hover:opacity-90" : "hover:bg-white/5"}`}
                   style={{
-                    background: filterStatus === s ? TEXT : "transparent",
+                    background: filterStatus === s ? TEXT : undefined,
                     color: filterStatus === s ? BG : TEXT_MUTED,
                     border: `1px solid ${filterStatus === s ? TEXT : BORDER}`,
                   }}
@@ -498,7 +511,7 @@ function FilterModal({ filterStatus, setFilterStatus, filterType, setFilterType,
                   onClick={() => setFilterType(t)}
                   className={`flex items-center justify-center gap-1.5 py-2.5 rounded-md text-xs font-semibold transition-all duration-150 active:scale-[0.97] ${filterType === t ? "hover:opacity-90" : "hover:bg-white/5"}`}
                   style={{
-                    background: filterType === t ? ACCENT : "transparent",
+                    background: filterType === t ? ACCENT : undefined,
                     color: filterType === t ? BG : TEXT_MUTED,
                     border: `1px solid ${filterType === t ? ACCENT : BORDER}`,
                   }}
@@ -511,11 +524,19 @@ function FilterModal({ filterStatus, setFilterStatus, filterType, setFilterType,
           </div>
         </div>
 
-        <div className="px-5 pt-1 pb-6 sm:pb-5 shrink-0">
+        <div className="flex gap-2 px-5 pt-1 pb-5 shrink-0">
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="flex-1 py-2.5 rounded-md font-semibold hover:bg-white/5 active:scale-[0.97] transition-all duration-150"
+            style={{ border: `1px solid ${BORDER}`, color: TEXT_MUTED }}
+          >
+            Reset
+          </button>
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-3 sm:py-2.5 rounded-md font-semibold hover:opacity-90 active:scale-[0.97] transition-all duration-150"
+            className="flex-1 py-2.5 rounded-md font-semibold hover:opacity-90 active:scale-[0.97] transition-all duration-150"
             style={{ background: ACCENT, color: BG }}
           >
             Done
@@ -549,13 +570,34 @@ export default function ReelLog() {
     }
   });
   const [expandedId, setExpandedId] = useState(null);
+  const [expandedHeight, setExpandedHeight] = useState(null);
+  const compactCardRefs = useRef(new Map());
 
   useEffect(() => {
     try {
       localStorage.setItem("reel-log:view-mode", viewMode);
     } catch {}
-    if (viewMode !== "compact") setExpandedId(null);
+    if (viewMode !== "compact") {
+      setExpandedId(null);
+      setExpandedHeight(null);
+    }
   }, [viewMode]);
+
+  const expandCompactCard = (show) => {
+    const el = compactCardRefs.current.get(show.id);
+    setExpandedHeight(el ? el.getBoundingClientRect().height : null);
+    setExpandedId(show.id);
+  };
+
+  useEffect(() => {
+    if (!expandedId) return;
+    const el = compactCardRefs.current.get(expandedId);
+    if (!el) return;
+    const t = setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, 60);
+    return () => clearTimeout(t);
+  }, [expandedId]);
 
   const fetchDetailsForShow = useCallback(async (id, contentType, titleOverride) => {
     setPendingIds((prev) => new Set(prev).add(id));
@@ -622,6 +664,7 @@ export default function ReelLog() {
   const deleteShow = (id) => {
     persist((shows || []).filter((s) => s.id !== id));
     setExpandedId((prev) => (prev === id ? null : prev));
+    setExpandedHeight((prev) => (expandedId === id ? null : prev));
   };
 
   const rewatch = (id) => {
@@ -665,7 +708,7 @@ export default function ReelLog() {
     const node = suggestionsRef.current;
     if (!node) return;
     const observer = new IntersectionObserver(
-      ([entry]) => setShowSuggestionsFab(!entry.isIntersecting),
+      ([entry]) => setShowSuggestionsFab(entry.intersectionRatio < 0.15),
       { threshold: 0.15 }
     );
     observer.observe(node);
@@ -730,7 +773,7 @@ export default function ReelLog() {
               onClick={() => setTab(t)}
               className={`px-4 py-1.5 rounded-md text-sm font-semibold uppercase tracking-wide transition-all duration-150 active:scale-[0.97] ${tab === t ? "hover:opacity-90" : "hover:bg-white/5"}`}
               style={{
-                background: tab === t ? ACCENT : "transparent",
+                background: tab === t ? ACCENT : undefined,
                 color: tab === t ? BG : TEXT_MUTED,
                 border: `1px solid ${tab === t ? ACCENT : BORDER}`,
               }}
@@ -785,7 +828,7 @@ export default function ReelLog() {
                   aria-label="Default view"
                   className={`p-1.5 rounded transition-all duration-150 active:scale-[0.97] ${viewMode === "default" ? "hover:opacity-90" : "hover:bg-white/5"}`}
                   style={{
-                    background: viewMode === "default" ? ACCENT : "transparent",
+                    background: viewMode === "default" ? ACCENT : undefined,
                     color: viewMode === "default" ? BG : TEXT_MUTED,
                   }}
                 >
@@ -798,7 +841,7 @@ export default function ReelLog() {
                   aria-label="Compact view"
                   className={`p-1.5 rounded transition-all duration-150 active:scale-[0.97] ${viewMode === "compact" ? "hover:opacity-90" : "hover:bg-white/5"}`}
                   style={{
-                    background: viewMode === "compact" ? ACCENT : "transparent",
+                    background: viewMode === "compact" ? ACCENT : undefined,
                     color: viewMode === "compact" ? BG : TEXT_MUTED,
                   }}
                 >
@@ -819,7 +862,15 @@ export default function ReelLog() {
                 {filtered.map((show) => {
                   const isExpanded = expandedId === show.id;
                   return (
-                    <motion.div key={show.id} layout className={isExpanded ? "col-span-full" : ""}>
+                    <motion.div
+                      key={show.id}
+                      layout
+                      ref={(el) => {
+                        if (el) compactCardRefs.current.set(show.id, el);
+                        else compactCardRefs.current.delete(show.id);
+                      }}
+                      className={isExpanded ? "col-span-full" : ""}
+                    >
                       {isExpanded ? (
                         <ShowCard
                           show={show}
@@ -830,9 +881,10 @@ export default function ReelLog() {
                           fetching={pendingIds.has(show.id)}
                           onCollapse={() => setExpandedId(null)}
                           posterLayoutId={`poster-${show.id}`}
+                          lockedHeight={expandedHeight}
                         />
                       ) : (
-                        <CompactShowCard show={show} onExpand={() => setExpandedId(show.id)} />
+                        <CompactShowCard show={show} onExpand={() => expandCompactCard(show)} />
                       )}
                     </motion.div>
                   );
@@ -920,12 +972,12 @@ export default function ReelLog() {
         <button
           type="button"
           onClick={() => suggestionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-          className={`fixed bottom-5 right-5 z-40 flex items-center gap-1.5 px-4 py-2.5 rounded-md font-semibold text-sm transition-all duration-300 active:scale-95 hover:opacity-90 ${
+          className={`fixed bottom-5 right-5 z-40 flex items-center gap-1.5 px-4 py-2.5 rounded-md font-semibold text-sm backdrop-blur-sm transition-all duration-300 active:scale-95 hover:brightness-110 ${
             showSuggestionsFab ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-2 pointer-events-none"
           }`}
-          style={{ background: ACCENT, color: BG, boxShadow: "0 4px 12px -4px rgba(157,124,242,0.35)" }}
+          style={{ background: `${ACCENT}B3`, color: BG, boxShadow: "0 4px 12px -4px rgba(157,124,242,0.2)" }}
         >
-          <Sparkles className="w-4 h-4" /> Suggestions <ChevronDown className="w-4 h-4" />
+          <Sparkles className="w-4 h-4" /> Suggestions <ArrowDown className="w-4 h-4 animate-arrowDown" />
         </button>
       )}
 

@@ -22,7 +22,7 @@ function pillClass(active) {
 
 function pillStyle(active) {
   return {
-    background: active ? ACCENT : "transparent",
+    background: active ? ACCENT : undefined,
     color: active ? BG : TEXT_MUTED,
     border: `1px solid ${active ? ACCENT : BORDER}`,
   };
@@ -315,7 +315,7 @@ export default function RecommendationsPanel({ shows, onAddToLog }) {
                         onClick={() => toggleGenre(g)}
                         className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all duration-150 active:scale-95 ${active ? "hover:opacity-90" : "hover:bg-white/5"}`}
                         style={{
-                          background: active ? ACCENT : "transparent",
+                          background: active ? ACCENT : undefined,
                           color: active ? BG : TEXT_MUTED,
                           border: `1px solid ${active ? ACCENT : BORDER}`,
                         }}
@@ -343,7 +343,7 @@ export default function RecommendationsPanel({ shows, onAddToLog }) {
                           onClick={() => toggleContentType(key)}
                           className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all duration-150 active:scale-95 ${active ? "hover:opacity-90" : "hover:bg-white/5"}`}
                           style={{
-                            background: active ? ACCENT : "transparent",
+                            background: active ? ACCENT : undefined,
                             color: active ? BG : TEXT_MUTED,
                             border: `1px solid ${active ? ACCENT : BORDER}`,
                           }}

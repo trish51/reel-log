@@ -28,11 +28,17 @@ export function Stamp({ ratingKey, size = "md" }) {
 export function Poster({ posterUrl, contentType, rating, showRating, loading, variant = "thumbnail", layoutId }) {
   const Icon = CONTENT_TYPE[contentType || "tv"].Icon;
   const isFull = variant === "full";
+  const isLockedHeight = variant === "lockedHeight";
+  const sizeClass = isFull
+    ? "w-full h-full"
+    : isLockedHeight
+    ? "h-full w-auto shrink-0 aspect-[2/3]"
+    : "w-24 sm:w-36 shrink-0 aspect-[2/3]";
   return (
     <motion.div
       layout
       layoutId={layoutId}
-      className={`relative overflow-hidden ${isFull ? "w-full h-full" : "w-24 sm:w-36 shrink-0 aspect-[2/3]"}`}
+      className={`relative overflow-hidden ${sizeClass}`}
       style={{ background: BG, borderRight: isFull ? "none" : `1px solid ${BORDER}` }}
     >
       {posterUrl ? (
