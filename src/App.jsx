@@ -124,7 +124,7 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching,
   return (
     <div
       onClick={onCollapse}
-      className={`relative rounded-xl overflow-hidden flex transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_rgba(157,124,242,0.3)] ${onCollapse ? "cursor-pointer" : ""} ${lockedHeight ? "" : "items-start sm:items-stretch"}`}
+      className={`relative rounded-xl overflow-hidden flex transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_16px_-8px_rgba(157,124,242,0.3)] ${onCollapse ? "cursor-pointer" : ""}`}
       style={rootStyle}
     >
       <Poster
@@ -206,37 +206,30 @@ function ShowCard({ show, onEdit, onDelete, onRewatch, onFetchDetails, fetching,
           </p>
         )}
 
-        <div className="flex items-center justify-between mt-3">
-          <div className="flex items-center gap-2">
-            {show.rewatchCount > 0 && (
-              <span
-                className="inline-flex items-center gap-1 text-[10px]"
-                style={{ color: TEXT_MUTED, fontFamily: "'IBM Plex Mono', monospace" }}
-              >
-                <RotateCcw className="w-3 h-3" /> {show.rewatchCount}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            {show.status === "watched" && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onRewatch(show.id); }}
-                className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150"
-                title="Log a rewatch"
-              >
-                <RotateCcw className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
-              </button>
-            )}
-            <button onClick={(e) => { e.stopPropagation(); setShowDetails(true); }} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="View details">
-              <BookOpen className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
+        <div className="flex items-center justify-end gap-1 mt-3">
+          {show.status === "watched" && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRewatch(show.id); }}
+              className="flex items-center gap-1 p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150"
+              title={show.rewatchCount > 0 ? `Rewatched ${show.rewatchCount}× — tap to log another` : "Log a rewatch"}
+            >
+              <RotateCcw className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
+              {show.rewatchCount > 0 && (
+                <span className="text-[10px]" style={{ color: TEXT_MUTED, fontFamily: "'IBM Plex Mono', monospace" }}>
+                  {show.rewatchCount}
+                </span>
+              )}
             </button>
-            <button onClick={(e) => { e.stopPropagation(); onEdit(show); }} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="Edit">
-              <Tag className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); onDelete(show.id); }} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="Remove">
-              <Trash2 className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
-            </button>
-          </div>
+          )}
+          <button onClick={(e) => { e.stopPropagation(); setShowDetails(true); }} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="View details">
+            <BookOpen className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onEdit(show); }} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="Edit">
+            <Tag className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(show.id); }} className="p-1.5 rounded hover:bg-white/5 active:scale-90 transition-all duration-150" title="Remove">
+            <Trash2 className="w-3.5 h-3.5" style={{ color: TEXT_MUTED }} />
+          </button>
         </div>
       </Content>
 
