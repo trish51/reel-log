@@ -30,6 +30,12 @@ export function Poster({ posterUrl, contentType, rating, showRating, loading, va
   const isFull = variant === "full";
   const isLockedHeight = variant === "lockedHeight";
   const isModalSmall = variant === "modalSmall";
+  // "thumbnail" uses a fixed width with the height coming from flex stretch
+  // (matching the sibling text column) — safe because width never depends
+  // on content. "lockedHeight" derives width from height via aspect-ratio,
+  // which is only safe when the card's height is itself an explicit,
+  // content-independent value (see ShowCard's lockedHeight prop) — using it
+  // where height is unbounded creates a circular width/height dependency.
   const sizeClass = isFull
     ? "w-full h-full"
     : isLockedHeight
