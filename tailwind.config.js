@@ -22,6 +22,10 @@ export default {
           from: { backgroundPosition: "200% 0" },
           to: { backgroundPosition: "-200% 0" },
         },
+        arrowDown: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(4px)" },
+        },
       },
       animation: {
         fadeIn: "fadeIn 0.15s ease-out",
@@ -30,6 +34,7 @@ export default {
         modalOut: "modalOut 0.18s ease-in",
         tabIn: "tabIn 0.2s ease-out",
         shimmer: "shimmer 1.6s ease-in-out infinite",
+        arrowDown: "arrowDown 1.6s ease-in-out infinite",
       },
     },
   },
