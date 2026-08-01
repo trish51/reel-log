@@ -29,17 +29,24 @@ export function Poster({ posterUrl, contentType, rating, showRating, loading, va
   const Icon = CONTENT_TYPE[contentType || "tv"].Icon;
   const isFull = variant === "full";
   const isLockedHeight = variant === "lockedHeight";
+  const isModalSmall = variant === "modalSmall";
   const sizeClass = isFull
     ? "w-full h-full"
     : isLockedHeight
     ? "h-full w-auto shrink-0 aspect-[2/3]"
-    : "w-24 sm:w-36 shrink-0 aspect-[2/3]";
+    : isModalSmall
+    ? "w-20 shrink-0 aspect-[2/3] rounded-md"
+    : "w-32 sm:w-36 shrink-0 aspect-[2/3]";
   return (
     <motion.div
       layout
       layoutId={layoutId}
       className={`relative overflow-hidden ${sizeClass}`}
-      style={{ background: BG, borderRight: isFull ? "none" : `1px solid ${BORDER}` }}
+      style={{
+        background: BG,
+        border: isModalSmall ? `1px solid ${BORDER}` : undefined,
+        borderRight: !isFull && !isModalSmall ? `1px solid ${BORDER}` : undefined,
+      }}
     >
       {posterUrl ? (
         <img src={posterUrl} alt="" className="w-full h-full object-cover" loading="lazy" />
